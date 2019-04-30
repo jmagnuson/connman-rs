@@ -5,3 +5,8 @@ authors = ["Jon Magnuson <jon.magnuson@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+dbus = "0.6"
+dbus-tokio = "0.3"
+futures = "0.1"
+qutex = "0.2"
+tokio = "0.1"

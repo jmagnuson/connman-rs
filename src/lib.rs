@@ -1,7 +1,7 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+//!  ConnMan D-Bus API
+
+extern crate dbus;
+extern crate dbus_tokio;
+extern crate futures;
+extern crate qutex;
+extern crate tokio;
