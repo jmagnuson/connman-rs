@@ -1,29 +1,29 @@
 use dbus::{arg::RefArg, ConnPath};
 use dbus_tokio::AConnection;
 use futures::Future;
-use qutex::Qutex;
 
 use super::gen::manager::Manager as IManager;
 use super::service::Service;
 use super::technology::Technology;
 use super::Error;
 use std::str::FromStr;
+use std::rc::Rc;
 
 /// Futures-aware wrapper struct for connman Manager object.
 #[derive(Clone, Debug)]
 pub struct Manager {
-    connection: Qutex<AConnection>,
+    connection: Rc<AConnection>,
     // TODO: Signal subscription/dispatcher
 }
 
 impl Manager {
-    pub fn new(connection: Qutex<AConnection>) -> Self {
+    pub fn new(connection: Rc<AConnection>) -> Self {
         Manager {
             connection
         }
     }
 
-    pub fn connpath(conn: Qutex<AConnection>) -> ConnPath<'static, Qutex<AConnection>> {
+    pub fn connpath(conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
         let connpath = ConnPath {
             conn: conn,
             dest: "net.connman".into(),

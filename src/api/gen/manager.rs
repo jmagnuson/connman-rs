@@ -8,19 +8,20 @@ use dbus::Error as DbusError;
 use futures::Future;
 use futures::future::IntoFuture;
 use std::boxed::Box;
-use qutex::Qutex;
+use std::rc::Rc;
 
 pub trait OrgFreedesktopDBusIntrospectable {
     type Err;
     fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>>;
 }
 
-impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Qutex<AConnection>> {
+impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
     fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"org.freedesktop.DBus.Introspectable".into(), &"Introspect".into());
-        let introspect_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let introspect_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -43,7 +44,7 @@ impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Qutex<AConnecti
                         };
                         Ok(xml)
                     })
-        }));
+        });
         Box::new(introspect_fut)
     }
 }
@@ -69,12 +70,13 @@ pub trait Manager {
     fn unregister_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>) -> Box<Future<Item=(), Error=Self::Err>>;
 }
 
-impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
+impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
     fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetProperties".into());
-        let get_properties_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let get_properties_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -97,7 +99,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(properties)
                     })
-        }));
+        });
         Box::new(get_properties_fut)
     }
 
@@ -108,7 +110,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             i.append(name);
             i.append(value);
         }
-        let set_property_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let set_property_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -123,13 +126,14 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(set_property_fut)
     }
 
     fn get_technologies(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetTechnologies".into());
-        let get_technologies_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let get_technologies_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -152,7 +156,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(technologies)
                     })
-        }));
+        });
         Box::new(get_technologies_fut)
     }
 
@@ -162,7 +166,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(provider);
         }
-        let remove_provider_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let remove_provider_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -177,13 +182,14 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(remove_provider_fut)
     }
 
     fn get_services(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetServices".into());
-        let get_services_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let get_services_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -206,13 +212,14 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(services)
                     })
-        }));
+        });
         Box::new(get_services_fut)
     }
 
     fn get_peers(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetPeers".into());
-        let get_peers_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let get_peers_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -235,7 +242,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(peers)
                     })
-        }));
+        });
         Box::new(get_peers_fut)
     }
 
@@ -245,7 +252,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(provider);
         }
-        let connect_provider_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let connect_provider_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -268,7 +276,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(path)
                     })
-        }));
+        });
         Box::new(connect_provider_fut)
     }
 
@@ -278,7 +286,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(path);
         }
-        let register_agent_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let register_agent_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -293,7 +302,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(register_agent_fut)
     }
 
@@ -303,7 +312,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(path);
         }
-        let unregister_agent_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let unregister_agent_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -318,7 +328,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(unregister_agent_fut)
     }
 
@@ -330,7 +340,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             i.append(accuracy);
             i.append(period);
         }
-        let register_counter_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let register_counter_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -345,7 +356,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(register_counter_fut)
     }
 
@@ -355,7 +366,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(path);
         }
-        let unregister_counter_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let unregister_counter_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -370,7 +382,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(unregister_counter_fut)
     }
 
@@ -381,7 +393,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             i.append(settings);
             i.append(notifier);
         }
-        let create_session_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let create_session_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -404,7 +417,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(session)
                     })
-        }));
+        });
         Box::new(create_session_fut)
     }
 
@@ -414,7 +427,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(session);
         }
-        let destroy_session_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let destroy_session_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -429,13 +443,14 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(destroy_session_fut)
     }
 
     fn request_private_network(&self) -> Box<Future<Item=(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, dbus::OwnedFd), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"RequestPrivateNetwork".into());
-        let request_private_network_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let request_private_network_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -472,7 +487,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok((path, settings, socket))
                     })
-        }));
+        });
         Box::new(request_private_network_fut)
     }
 
@@ -482,7 +497,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(path);
         }
-        let release_private_network_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let release_private_network_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -497,7 +513,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(release_private_network_fut)
     }
 
@@ -508,7 +524,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             i.append(specification);
             i.append(master);
         }
-        let register_peer_service_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let register_peer_service_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -523,7 +540,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(register_peer_service_fut)
     }
 
@@ -533,7 +550,8 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
             let mut i = arg::IterAppend::new(&mut msg);
             i.append(specification);
         }
-        let unregister_peer_service_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let unregister_peer_service_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -548,7 +566,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(unregister_peer_service_fut)
     }
 }
@@ -656,12 +674,13 @@ pub trait Clock {
     fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>>;
 }
 
-impl<'a> Clock for dbus::ConnPath<'a, Qutex<AConnection>> {
+impl<'a> Clock for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
     fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Clock".into(), &"GetProperties".into());
-        let get_properties_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let get_properties_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -684,7 +703,7 @@ impl<'a> Clock for dbus::ConnPath<'a, Qutex<AConnection>> {
                         };
                         Ok(properties)
                     })
-        }));
+        });
         Box::new(get_properties_fut)
     }
 
@@ -695,7 +714,8 @@ impl<'a> Clock for dbus::ConnPath<'a, Qutex<AConnection>> {
             i.append(name);
             i.append(value);
         }
-        let set_property_fut = self.conn.clone().lock().map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to acquire lock")).and_then(|conn| conn.method_call(msg)
+        let set_property_fut = self.conn
+            .method_call(msg)
             .into_future()
             .map_err(|_e| DbusError::new_custom("org.freedesktop.DBus.Failed", "failed to call method"))
             .and_then(|amethodcall| {
@@ -710,7 +730,7 @@ impl<'a> Clock for dbus::ConnPath<'a, Qutex<AConnection>> {
                     }).and_then(|_m| {
                         Ok(())
                     })
-        }));
+        });
         Box::new(set_property_fut)
     }
 }

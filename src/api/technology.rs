@@ -1,7 +1,7 @@
 use dbus::{arg, ConnPath};
 use dbus_tokio::AConnection;
 use futures::Future;
-use qutex::Qutex;
+use std::rc::Rc;
 
 use std::collections::HashMap;
 
@@ -11,14 +11,14 @@ use super::Error;
 /// Futures-aware wrapper struct for connman Technology object.
 #[derive(Debug)]
 pub struct Technology {
-    connection: Qutex<AConnection>,
+    connection: Rc<AConnection>,
     pub path: dbus::Path<'static>,
     pub args: HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>,
 }
 
 impl Technology {
     pub fn new(
-        connection: Qutex<AConnection>,
+        connection: Rc<AConnection>,
         path: dbus::Path<'static>,
         args: HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>,
     ) -> Self {
@@ -29,7 +29,7 @@ impl Technology {
         }
     }
 
-    pub fn connpath(&self, conn: Qutex<AConnection>) -> ConnPath<'static, Qutex<AConnection>> {
+    pub fn connpath(&self, conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
         let connpath = ConnPath {
             conn: conn,
             dest: "net.connman".into(),
