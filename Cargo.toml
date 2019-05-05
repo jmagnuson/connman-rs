@@ -2,6 +2,11 @@
 name = "connman"
 version = "0.1.1"
 authors = ["Jon Magnuson <jon.magnuson@gmail.com>"]
+description = "A [ConnMan] library that abstracts the D-Bus layer"
+repository = "https://github.com/jmagnuson/connman-rs"
+documentation = "https://docs.rs/connman"
+readme = "README.md"
+keywords = ["connman", "dbus", "wifi", "networking", "tokio"]
 edition = "2018"
 license = "MIT/Apache-2.0"
 
