@@ -15,6 +15,10 @@ license = "MIT/Apache-2.0"
 name = "connman"
 path = "src/lib.rs"
 
+[[example]]
+name = "wifi_scan_list"
+path = "examples/wifi_scan_list.rs"
+
 [dependencies]
 dbus = "0.6"
 dbus-tokio = "0.3"
