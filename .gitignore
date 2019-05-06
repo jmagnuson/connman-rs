@@ -1,3 +1,8 @@
 /target
 **/*.rs.bk
 Cargo.lock
+
+# files used for cross-compilation
+/.cargo
+Makefile
+sdk-linker-wrapper.sh
