@@ -1,10 +1,13 @@
 # connman-rs
 
+[![crates.io](http://meritbadge.herokuapp.com/connman)](https://crates.io/crates/connman)
+
 A [ConnMan] API library that abstracts the D-Bus layer using `dbus-tokio` and
 `futures`.
 
 The API is still under development, and may be subject to change.
 
+[Documentation](https://docs.rs/connman)
 
 [ConnMan]: https://01.org/connman
 
@@ -40,7 +43,7 @@ fn main() {
     let mut runtime = Runtime::new().unwrap();
 
     let conn = Rc::new(Connection::get_private(BusType::System).unwrap());
-    let aconn = Rc::new(AConnection::new(c.clone(), Handle::default(), &mut rt).unwrap());
+    let aconn = Rc::new(AConnection::new(conn.clone(), Handle::default(), &mut runtime).unwrap());
     
     let manager = Manager::new(aconn);
     
@@ -56,3 +59,19 @@ fn main() {
     runtime.block_on(f).unwrap();
 }
 ```
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.
