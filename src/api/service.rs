@@ -41,9 +41,27 @@ impl Service {
 
 impl Service {
     pub fn connect(&self) -> impl Future<Item=(), Error=Error> {
-        let connclone = self.connection.clone();
-
-        let connpath = self.connpath(connclone);
+        let connpath = self.connpath(self.connection.clone());
         IService::connect(&connpath).map_err(|e| e.into())
+    }
+
+    pub fn disconnect(&self) -> impl Future<Item=(), Error=Error> {
+        let connpath = self.connpath(self.connection.clone());
+        IService::disconnect(&connpath).map_err(|e| e.into())
+    }
+
+    pub fn remove(&self) -> impl Future<Item=(), Error=Error> {
+        let connpath = self.connpath(self.connection.clone());
+        IService::remove(&connpath).map_err(|e| e.into())
+    }
+
+    pub fn move_before(&self, service: &Service) -> impl Future<Item=(), Error=Error> {
+        let connpath = self.connpath(self.connection.clone());
+        IService::move_before(&connpath, service.path.clone()).map_err(|e| e.into())
+    }
+
+    pub fn move_after(&self, service: &Service) -> impl Future<Item=(), Error=Error> {
+        let connpath = self.connpath(self.connection.clone());
+        IService::move_after(&connpath, service.path.clone()).map_err(|e| e.into())
     }
 }
