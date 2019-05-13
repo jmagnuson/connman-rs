@@ -1,4 +1,5 @@
-use dbus::{arg::RefArg, ConnPath};
+use dbus::arg::{RefArg, Variant};
+use dbus::ConnPath;
 use dbus_tokio::AConnection;
 use futures::Future;
 
@@ -60,19 +61,31 @@ impl Manager {
                     .collect()
             )
     }
+}
 
-    pub fn get_state(&self) -> impl Future<Item=Option<State>, Error=Error> {
-        let connclone = self.connection.clone();
-
-        let connpath = Self::connpath(connclone.clone());
+impl Manager {
+    pub fn get_state(&self) -> impl Future<Item=State, Error=Error> {
+        let connpath = Self::connpath(self.connection.clone());
         IManager::get_properties(&connpath)
             .map_err(|e| e.into())
-            .map(move |a|
-                a.get("State")
-                    // TODO: should this just map to Future Error?
-                    .and_then(|variant| variant.as_str())
-                    .and_then(|s| State::from_str(s).ok())
+            .and_then(move |a|
+                super::get_property_fromstr::<State>(a, "State")
             )
+    }
+
+    pub fn get_offline_mode(&self) -> impl Future<Item=bool, Error=Error> {
+        let connpath = Self::connpath(self.connection.clone());
+        IManager::get_properties(&connpath)
+            .map_err(|e| e.into())
+            .and_then(move |a|
+                super::get_property::<bool>(a, "OfflineMode")
+            )
+    }
+
+    pub fn set_offline_mode(&self, offline_mode: bool) -> impl Future<Item=(), Error=Error> {
+        let connpath = Self::connpath(self.connection.clone());
+        IManager::set_property(&connpath, "OfflineMode", Variant(offline_mode))
+            .map_err(|e| e.into())
     }
 }
 
