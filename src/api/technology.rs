@@ -6,21 +6,21 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use super::gen::technology::Technology as ITechnology;
-use super::Error;
+use super::{Error, RefArgMap};
 
 /// Futures-aware wrapper struct for connman Technology object.
 #[derive(Debug)]
 pub struct Technology {
     connection: Rc<AConnection>,
     pub path: dbus::Path<'static>,
-    pub args: HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>,
+    pub args: RefArgMap,
 }
 
 impl Technology {
     pub fn new(
         connection: Rc<AConnection>,
         path: dbus::Path<'static>,
-        args: HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>,
+        args: RefArgMap,
     ) -> Self {
         Technology {
             connection,

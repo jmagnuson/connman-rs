@@ -69,7 +69,7 @@ impl Manager {
         IManager::get_properties(&connpath)
             .map_err(|e| e.into())
             .and_then(move |a|
-                super::get_property_fromstr::<State>(a, "State")
+                super::get_property_fromstr::<State>(&a, "State")
             )
     }
 
@@ -78,7 +78,7 @@ impl Manager {
         IManager::get_properties(&connpath)
             .map_err(|e| e.into())
             .and_then(move |a|
-                super::get_property::<bool>(a, "OfflineMode")
+                super::get_property::<bool>(&a, "OfflineMode")
             )
     }
 

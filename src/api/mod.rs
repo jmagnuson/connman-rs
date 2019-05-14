@@ -14,6 +14,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+type RefArgMap = HashMap<String, Variant<Box<RefArg + 'static>>>;
+
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "{}", _0)]
@@ -44,7 +46,7 @@ impl From<dbus::Error> for Error {
 
 /// Convenience function for getting property values.
 fn get_property<T: Clone + 'static>(
-    properties: HashMap<String, Variant<Box<RefArg + 'static>>>,
+    properties: &RefArgMap,
     prop_name: &'static str,
 ) -> Result<T, Error> {
     properties.get(prop_name)
@@ -57,7 +59,7 @@ fn get_property<T: Clone + 'static>(
 
 /// Convenience function for getting property values that impl `FromStr`.
 fn get_property_fromstr<T: FromStr + 'static>(
-    properties: HashMap<String, Variant<Box<RefArg + 'static>>>,
+    properties: &RefArgMap,
     prop_name: &'static str,
 ) -> Result<T, Error> {
     properties.get(prop_name)
