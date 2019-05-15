@@ -19,6 +19,11 @@ path = "src/lib.rs"
 name = "wifi_scan_list"
 path = "examples/wifi_scan_list.rs"
 
+[[example]]
+name = "wifi_introspect"
+path = "examples/wifi_introspect.rs"
+required-features = ["introspection"]
+
 [features]
 default = []
 introspection = ["xml-rs"]
