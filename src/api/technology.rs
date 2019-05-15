@@ -8,6 +8,9 @@ use std::collections::HashMap;
 use super::gen::technology::Technology as ITechnology;
 use super::Error;
 
+#[cfg(feature = "introspection")]
+use xml::reader::EventReader;
+
 /// Futures-aware wrapper struct for connman Technology object.
 #[derive(Debug)]
 pub struct Technology {
@@ -41,6 +44,18 @@ impl Technology {
 }
 
 impl Technology {
+    #[cfg(feature = "introspection")]
+    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=Error> {
+        use crate::api::gen::technology::OrgFreedesktopDBusIntrospectable as Introspectable;
+
+        Introspectable::introspect(&self.connpath(self.connection.clone()))
+            .map_err(|e| e.into())
+            .map(|s| {
+                let rdr = std::io::Cursor::new(s.into_bytes());
+                EventReader::new(rdr)
+            })
+    }
+
     pub fn scan(&self) -> impl Future<Item=(), Error=Error> {
         let connclone = self.connection.clone();
 

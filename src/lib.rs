@@ -59,6 +59,9 @@ extern crate failure;
 extern crate futures;
 extern crate tokio;
 
+#[cfg(feature = "introspection")]
+extern crate xml;
+
 pub mod api;
 
 pub use crate::api::{
