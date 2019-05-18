@@ -141,8 +141,7 @@ impl Signal {
         msg.interface()
             .ok_or(Error::SignalError(SignalError::NoMatch(Cow::Borrowed("[Unknown]"))))
             .and_then(|ref dbus_iface| {
-                let dbus_iface_s = dbus_iface.as_cstr().to_string_lossy();
-                Interface::from_str(&dbus_iface_s)
+                Interface::from_str(&**dbus_iface)
                     .map_err(|_| Error::SignalError(SignalError::NoMatch(Cow::Borrowed("afddsf"))))
             })
             .and_then(|iface| {

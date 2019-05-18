@@ -172,25 +172,83 @@ pub enum Signal {
     PeersChanged(PeersChanged),
 }
 
+#[derive(Clone, Debug)]
+pub enum SignalKind {
+    TechnologyAdded,
+    TechnologyRemoved,
+    ServicesChanged,
+    PropertyChanged,
+    PeersChanged,
+}
+
+impl FromStr for SignalKind {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "TechnologyAdded" => Ok(SignalKind::TechnologyAdded),
+            "TechnologyRemoved" => Ok(SignalKind::TechnologyAdded),
+            "ServicesChanged" => Ok(SignalKind::TechnologyAdded),
+            "PropertyChanged" => Ok(SignalKind::TechnologyAdded),
+            "PeersChanged" => Ok(SignalKind::TechnologyAdded),
+            _ => Err(()),
+        }
+    }
+}
+
+impl From<SignalKind> for &'static str {
+    fn from(iface: SignalKind) -> Self {
+        match iface {
+            SignalKind::TechnologyAdded => "TechnologyAdded",
+            SignalKind::TechnologyRemoved => "TechnologyRemoved",
+            SignalKind::ServicesChanged => "ServicesChanged",
+            SignalKind::PropertyChanged => "PropertyChanged",
+            SignalKind::PeersChanged => "PeersChanged",
+        }
+    }
+}
+
 impl Signal {
     pub fn from_message(msg: &Message) -> Result<Self, Error> {
-        if let Some(manager_technology_added) = genmgr::ManagerTechnologyAdded::from_message(&msg) {
-            return Ok(Signal::TechnologyAdded(TechnologyAdded {inner: manager_technology_added}));
-        }
-        if let Some(manager_technology_removed) = genmgr::ManagerTechnologyRemoved::from_message(&msg) {
-            return Ok(Signal::TechnologyRemoved(TechnologyRemoved {inner: manager_technology_removed}));
-        }
-        if let Some(manager_services_changed) = genmgr::ManagerServicesChanged::from_message(&msg) {
-            return Ok(Signal::ServicesChanged(ServicesChanged {inner: manager_services_changed}));
-        }
-        //if let Some(manager_property_changed) = gen::manager::ManagerPropertyChanged::from_message(&msg) {
-        //    return Some(Signal::Manager(manager::Signal::PropertyChanged(manager::PropertyChanged {inner: manager_property_changed})));
-        //}
-        if let Some(manager_peers_changed) = genmgr::ManagerPeersChanged::from_message(&msg) {
-            return Ok(Signal::PeersChanged(PeersChanged {inner: manager_peers_changed}));
-        }
-
-        Err(super::SignalError::NoMatch(Cow::Borrowed("Manager")).into())
+        msg.member()
+            .ok_or(Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+            .and_then(|ref dbus_name| {
+                SignalKind::from_str(&**dbus_name)
+                    .map_err(|_| Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+            })
+            .and_then(|name| {
+                match name {
+                    SignalKind::TechnologyAdded => {
+                        genmgr::ManagerTechnologyAdded::from_message(&msg)
+                            .map(|i| Signal::TechnologyAdded(TechnologyAdded{inner: i}))
+                            .ok_or(Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+                    },
+                    SignalKind::TechnologyRemoved => {
+                        genmgr::ManagerTechnologyRemoved::from_message(&msg)
+                            .map(|i| Signal::TechnologyRemoved(TechnologyRemoved{inner: i}))
+                            .ok_or(Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+                    },
+                    SignalKind::ServicesChanged => {
+                        genmgr::ManagerServicesChanged::from_message(&msg)
+                            .map(|i| Signal::ServicesChanged(ServicesChanged{inner: i}))
+                            .ok_or(Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+                    },
+                    SignalKind::PropertyChanged => {
+                        genmgr::ManagerPropertyChanged::from_message(&msg)
+                            .ok_or(Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+                            .and_then(|m| {
+                                Property::try_from(m)
+                                    .map_err(|_| Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+                            })
+                            .map(|i| Signal::PropertyChanged(PropertyChanged{inner: i}))
+                    },
+                    SignalKind::PeersChanged => {
+                        genmgr::ManagerPeersChanged::from_message(&msg)
+                            .map(|i| Signal::PeersChanged(PeersChanged{inner: i}))
+                            .ok_or(Error::SignalError(super::SignalError::NoMatch(Cow::Borrowed("Manager"))))
+                    },
+                }
+            })
     }
 }
 
