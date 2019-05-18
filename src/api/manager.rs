@@ -1,14 +1,16 @@
-use dbus::arg::{RefArg, Variant};
+use dbus::arg::{cast, RefArg, Variant};
 use dbus::ConnPath;
 use dbus_tokio::AConnection;
 use futures::Future;
 
+use super::gen::manager as genmgr;
 use super::gen::manager::Manager as IManager;
 use super::service::Service;
 use super::technology::Technology;
 use super::Error;
 use std::str::FromStr;
 use std::rc::Rc;
+use std::convert::TryFrom;
 
 /// Futures-aware wrapper struct for connman Manager object.
 #[derive(Clone, Debug)]
@@ -111,4 +113,95 @@ impl FromStr for State {
             _ => Err(()),
         }
     }
+}
+
+pub enum PropertyKind {
+    State,
+    OfflineMode,
+    SessionMode,
+}
+
+impl FromStr for PropertyKind {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "State" => Ok(PropertyKind::State),
+            "OfflineMode" => Ok(PropertyKind::OfflineMode),
+            "SessionMode" => Ok(PropertyKind::SessionMode),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Property {
+    State(State),
+    OfflineMode(bool),
+    SessionMode(bool),
+}
+
+impl TryFrom<genmgr::ManagerPropertyChanged> for Property {
+    type Error = ();
+
+    fn try_from(val: genmgr::ManagerPropertyChanged) -> Result<Self, Self::Error> {
+        PropertyKind::from_str(val.name.as_str()).and_then(|prop| {
+            match prop {
+                PropertyKind::State => {
+                    val.value.as_str().ok_or(())
+                        .and_then(|valstr| State::from_str(valstr))
+                        .map(|v| Property::State(v))
+                },
+                PropertyKind::OfflineMode => cast::<bool>(&val.value)
+                    .ok_or(()).map(|v| Property::OfflineMode(*v)),
+                PropertyKind::SessionMode => cast::<bool>(&val.value)
+                    .ok_or(()).map(|v| Property::SessionMode(*v)),
+            }
+        })
+    }
+}
+
+
+#[derive(Debug)]
+pub enum Signal {
+    TechnologyAdded(TechnologyAdded),
+    TechnologyRemoved(TechnologyRemoved),
+    ServicesChanged(ServicesChanged),
+    PropertyChanged(PropertyChanged),
+    PeersChanged(PeersChanged),
+}
+
+#[derive(Debug)]
+pub struct TechnologyAdded {
+    pub inner: super::gen::manager::ManagerTechnologyAdded,
+}
+
+#[derive(Debug)]
+pub struct TechnologyRemoved {
+    pub inner: super::gen::manager::ManagerTechnologyRemoved,
+}
+
+#[derive(Debug)]
+pub struct ServicesChanged {
+    pub inner: super::gen::manager::ManagerServicesChanged,
+}
+
+#[derive(Debug)]
+pub struct PropertyChanged {
+    //    inner: manager::ManagerPropertyChanged,
+    // TODO: map ^ to v
+    pub inner: Property,
+}
+
+impl TryFrom<genmgr::ManagerPropertyChanged> for PropertyChanged {
+    type Error = ();
+
+    fn try_from(val: genmgr::ManagerPropertyChanged) -> Result<Self, Self::Error> {
+        Property::try_from(val).map(|v| PropertyChanged { inner: v })
+    }
+}
+
+#[derive(Debug)]
+pub struct PeersChanged {
+    pub inner: super::gen::manager::ManagerPeersChanged,
 }

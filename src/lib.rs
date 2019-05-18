@@ -66,3 +66,146 @@ pub use crate::api::{
     service::Service,
     technology::Technology,
 };
+
+use std::cell::{RefCell, RefMut};
+use std::rc::Rc;
+
+use dbus::{BusType, Connection, Message};
+use dbus_tokio::{AMessageStream, AConnection};
+use futures::future::Either;
+use futures::sync::mpsc;
+use futures::{Future, IntoFuture, Sink, Stream};
+
+use tokio::reactor::Handle;
+use tokio::runtime::current_thread::Runtime;
+use tokio::prelude::FutureExt;
+use futures::stream;
+
+use crate::api::Signal;
+
+#[derive(Clone, Debug)]
+pub struct SignalsHandle {
+    subscriptions: Rc<RefCell<Vec<mpsc::Sender<String>>>>,
+}
+
+impl SignalsHandle {
+    pub fn new(rt: &mut Runtime, message_stream: AMessageStream) -> Self {
+
+        let subscriptions = Rc::new(RefCell::new(Vec::new()));
+
+        let f = {
+            let subs_clone = subscriptions.clone();
+            message_stream.and_then(move |msg: Message| {
+                let signal_opt = Signal::from_message(&msg);
+                // FIXME: NEED TO CLONE MESSAGE SOMEHOW
+//                let msg_s = format!("message: {:?}", msg);
+//                let msg_clone = msg_s.clone();
+//                info!("inner {}", msg_clone);
+
+                let signal = if let Some(sig) = Signal::from_message(&msg) {
+                    format!("{:?}", sig)
+                } else {
+                    return Either::A(futures::future::ok::<(),()>(()))
+                };
+
+                let publish_fut = {
+                    let fut_vec = {
+                        /*if let Ok(subs) = subs_clone.try_borrow_mut() {
+                            let msg_clone = signal.clone();
+                            let fut_vec = subs.iter().cloned()
+                                .map(move |mut sub: mpsc::Sender<String>| {
+                                    sub.send(msg_clone.clone())
+                                        //.map_err(())
+                                        .then(|res| {
+                                            if res.is_err() {
+                                                println!("Failed to dispatch message to subscriber");
+                                            }
+                                            futures::future::ok::<(),()>(())
+                                            //Ok(())
+                                        })
+                                }).collect();
+                            Ok(fut_vec)
+                        } else { Err(()) }*/
+                        subs_clone
+                            .try_borrow_mut().map_err(|_| (()))
+                            .map(move |subs: RefMut<Vec<mpsc::Sender<String>>>| {
+                                let msg_clone = signal.clone();
+                                let fut_vec: Vec<_> = subs.iter().cloned()
+                                    .map(move |mut sub| {
+                                        sub.send(msg_clone.clone())
+                                            //.map_err(())
+                                            .then(|res| {
+                                                if res.is_err() {
+                                                    println!("Failed to dispatch message to subscriber");
+                                                }
+                                                futures::future::ok::<(),()>(())
+                                                //Ok(())
+                                            })
+                                    }).collect();
+                                fut_vec
+                            })
+                    };
+                    fut_vec
+                        .into_future()
+                        .and_then(|fut_vec| stream::futures_unordered(fut_vec).for_each(|_| Ok::<(),()>(())))
+                        .then(|_| Ok::<(),()>(()))
+                };
+
+                Either::B(publish_fut)
+            }).for_each(|_| Ok::<(),()>(()))
+        };
+
+        rt.spawn(f);
+        SignalsHandle {
+            subscriptions
+        }
+    }
+
+    pub fn subscribe(&mut self) -> impl Future<Item=mpsc::Receiver<String>, Error=&'static str> {
+        let (tx, rx) = mpsc::channel::<String>(20);
+        self.subscriptions.clone().try_borrow_mut()
+            .map_err(|_| "fucked")
+            .map(move |mut v| v.push(tx))
+            .map(move |_| rx)
+            .into_future()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Client {
+    connection: Rc<AConnection>,
+    sig_handle: SignalsHandle,
+}
+
+impl Client {
+    pub fn new(rt: &mut Runtime) -> Self {
+
+        let c = Rc::new(Connection::get_private(BusType::System)
+            .expect("Failed to initialize d-bus connection"));
+
+        // TODO: c.add_match(Signal::match_str(None, None))
+        c.add_match("type=signal,interface=net.connman.Manager").unwrap();
+        c.add_match("type=signal,interface=net.connman.Service").unwrap();
+        c.add_match("type=signal,interface=net.connman.Technology").unwrap();
+
+        let aconn = AConnection::new(c.clone(), Handle::default(), rt)
+            .expect("failed to create aconn");
+        let messages = aconn.messages().unwrap();
+
+        let connection = Rc::new(aconn);
+
+        Client {
+            connection,
+            sig_handle: SignalsHandle::new(rt, messages),
+        }
+    }
+
+    pub fn manager(&self) -> Manager {
+        Manager::new(self.connection.clone())
+    }
+
+    pub fn subscribe(&mut self) -> impl Future<Item=mpsc::Receiver<String>, Error=&'static str> {
+        self.sig_handle.subscribe()
+    }
+}
+
