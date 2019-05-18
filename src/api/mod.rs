@@ -87,6 +87,48 @@ fn get_property_fromstr<T: FromStr + 'static>(
         )
 }
 
+pub enum Interface {
+    Manager,
+    //Technology,
+    //Service
+}
+
+impl FromStr for Interface {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "net.connman.Manager" => Ok(Interface::Manager),
+            //"net.connman.Technology" => Ok(Interface::Technology),
+            //"net.connman.Service" => Ok(Interface::Service),
+            _ => Err(()),
+        }
+    }
+}
+
+impl From<Interface> for &'static str {
+    fn from(iface: Interface) -> Self {
+        match iface {
+            Interface::Manager => "net.connman.Manager",
+            //Interface::Technology => "net.connman.Technology",
+            //Interface::Service => "net.connman.Service",
+        }
+    }
+}
+
+impl Interface {
+    /// Creates an iterator for all defined `Interface` variants. Useful for
+    /// setting up signals filter.
+    pub fn values() -> std::slice::Iter<'static, Interface> {
+        static INTERFACES: [Interface;  /*3*/ 1] = [
+            Interface::Manager,
+            //Interface::Technology,
+            //Interface::Service,
+        ];
+        INTERFACES.into_iter()
+    }
+}
+
 #[derive(Debug)]
 pub enum Signal {
     Manager(manager::Signal),
@@ -96,23 +138,20 @@ pub enum Signal {
 
 impl Signal {
     pub(crate) fn from_message(msg: &Message) -> Result<Self, Error> {
-        match manager::Signal::from_message(msg).map(|m| Signal::Manager(m)) {
-            Ok(msg) => { return Ok(msg); },
-            Err(Error::SignalError(SignalError::NoMatch(_))) => {},
-            e @ Err(_) => { return e; },
+        msg.interface()
+            .ok_or(Error::SignalError(SignalError::NoMatch(Cow::Borrowed("[Unknown]"))))
+            .and_then(|ref dbus_iface| {
+                let dbus_iface_s = dbus_iface.as_cstr().to_string_lossy();
+                Interface::from_str(&dbus_iface_s)
+                    .map_err(|_| Error::SignalError(SignalError::NoMatch(Cow::Borrowed("afddsf"))))
+            })
+            .and_then(|iface| {
+                match iface {
+                    Interface::Manager => manager::Signal::from_message(msg).map(|m| Signal::Manager(m)),
+                    //Interface::Technology => technology::Signal::from_message(msg).map(|m| Signal::Technology(m)),
+                    //Interface::Service => serivce::Signal::from_message(msg).map(|m| Signal::Service(m)),
 
-        }
-
-        // Technology signals
-        //if let Some(technology_property_changed) = technology::TechnologyPropertyChanged::from_message(&msg) {
-        //    return Some(Signal::Technology(TechnologySignal::PropertyChanged(TechnologyPropertyChanged{inner: technology_property_changed})));
-        //}
-
-        // Service signals
-        //if let Some(service_property_changed) = service::ServicePropertyChanged::from_message(&msg) {
-        //    return Some(Signal::Service(ServiceSignal::PropertyChanged(ServicePropertyChanged{inner: service_property_changed})));
-        //}
-
-        Err(SignalError::NoMatch(Cow::Borrowed("[Unknown]")).into())
+                }
+            })
     }
 }
