@@ -102,7 +102,7 @@ impl SignalsHandle {
 //                let msg_clone = msg_s.clone();
 //                info!("inner {}", msg_clone);
 
-                let signal = if let Some(sig) = Signal::from_message(&msg) {
+                let signal = if let Ok(sig) = Signal::from_message(&msg) {
                     format!("{:?}", sig)
                 } else {
                     return Either::A(futures::future::ok::<(),()>(()))

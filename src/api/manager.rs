@@ -1,5 +1,5 @@
 use dbus::arg::{cast, RefArg, Variant};
-use dbus::ConnPath;
+use dbus::{ConnPath, Message, SignalArgs};
 use dbus_tokio::AConnection;
 use futures::Future;
 
@@ -8,6 +8,7 @@ use super::gen::manager::Manager as IManager;
 use super::service::Service;
 use super::technology::Technology;
 use super::Error;
+use std::borrow::Cow;
 use std::str::FromStr;
 use std::rc::Rc;
 use std::convert::TryFrom;
@@ -171,19 +172,41 @@ pub enum Signal {
     PeersChanged(PeersChanged),
 }
 
+impl Signal {
+    pub fn from_message(msg: &Message) -> Result<Self, Error> {
+        if let Some(manager_technology_added) = genmgr::ManagerTechnologyAdded::from_message(&msg) {
+            return Ok(Signal::TechnologyAdded(TechnologyAdded {inner: manager_technology_added}));
+        }
+        if let Some(manager_technology_removed) = genmgr::ManagerTechnologyRemoved::from_message(&msg) {
+            return Ok(Signal::TechnologyRemoved(TechnologyRemoved {inner: manager_technology_removed}));
+        }
+        if let Some(manager_services_changed) = genmgr::ManagerServicesChanged::from_message(&msg) {
+            return Ok(Signal::ServicesChanged(ServicesChanged {inner: manager_services_changed}));
+        }
+        //if let Some(manager_property_changed) = gen::manager::ManagerPropertyChanged::from_message(&msg) {
+        //    return Some(Signal::Manager(manager::Signal::PropertyChanged(manager::PropertyChanged {inner: manager_property_changed})));
+        //}
+        if let Some(manager_peers_changed) = genmgr::ManagerPeersChanged::from_message(&msg) {
+            return Ok(Signal::PeersChanged(PeersChanged {inner: manager_peers_changed}));
+        }
+
+        Err(super::SignalError::NoMatch(Cow::Borrowed("Manager")).into())
+    }
+}
+
 #[derive(Debug)]
 pub struct TechnologyAdded {
-    pub inner: super::gen::manager::ManagerTechnologyAdded,
+    pub inner: genmgr::ManagerTechnologyAdded,
 }
 
 #[derive(Debug)]
 pub struct TechnologyRemoved {
-    pub inner: super::gen::manager::ManagerTechnologyRemoved,
+    pub inner: genmgr::ManagerTechnologyRemoved,
 }
 
 #[derive(Debug)]
 pub struct ServicesChanged {
-    pub inner: super::gen::manager::ManagerServicesChanged,
+    pub inner: genmgr::ManagerServicesChanged,
 }
 
 #[derive(Debug)]
@@ -203,5 +226,5 @@ impl TryFrom<genmgr::ManagerPropertyChanged> for PropertyChanged {
 
 #[derive(Debug)]
 pub struct PeersChanged {
-    pub inner: super::gen::manager::ManagerPeersChanged,
+    pub inner: genmgr::ManagerPeersChanged,
 }

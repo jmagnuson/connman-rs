@@ -23,12 +23,22 @@ pub enum Error {
     DbusError(#[cause] dbus::Error),
     #[fail(display = "'{}'", _0)]
     PropertyError(#[cause] PropertyError),
+    #[fail(display = "'{}'", _0)]
+    SignalError(#[cause] SignalError),
 }
 
 #[derive(Debug, Fail)]
 pub enum PropertyError {
     #[fail(display = "Property not present: '{}'", _0)]
     NotPresent(Cow<'static, str>),
+    #[fail(display = "Failed to cast property: '{}'", _0)]
+    Cast(Cow<'static, str>)
+}
+
+#[derive(Debug, Fail)]
+pub enum SignalError {
+    #[fail(display = "No match for: '{}'", _0)]
+    NoMatch(Cow<'static, str>),
     #[fail(display = "Failed to cast property: '{}'", _0)]
     Cast(Cow<'static, str>)
 }
@@ -42,6 +52,12 @@ impl From<PropertyError> for Error {
 impl From<dbus::Error> for Error {
     fn from(e: dbus::Error) -> Self {
         Error::DbusError(e)
+    }
+}
+
+impl From<SignalError> for Error {
+    fn from(e: SignalError) -> Self {
+        Error::SignalError(e)
     }
 }
 
@@ -79,22 +95,12 @@ pub enum Signal {
 }
 
 impl Signal {
-    pub(crate) fn from_message(msg: &Message) -> Option<Self> {
-        // Manager signals
-        if let Some(manager_technology_added) = gen::manager::ManagerTechnologyAdded::from_message(&msg) {
-            return Some(Signal::Manager(manager::Signal::TechnologyAdded(manager::TechnologyAdded {inner: manager_technology_added})));
-        }
-        if let Some(manager_technology_removed) = gen::manager::ManagerTechnologyRemoved::from_message(&msg) {
-            return Some(Signal::Manager(manager::Signal::TechnologyRemoved(manager::TechnologyRemoved {inner: manager_technology_removed})));
-        }
-        if let Some(manager_services_changed) = gen::manager::ManagerServicesChanged::from_message(&msg) {
-            return Some(Signal::Manager(manager::Signal::ServicesChanged(manager::ServicesChanged {inner: manager_services_changed})));
-        }
-        //if let Some(manager_property_changed) = gen::manager::ManagerPropertyChanged::from_message(&msg) {
-        //    return Some(Signal::Manager(manager::Signal::PropertyChanged(manager::PropertyChanged {inner: manager_property_changed})));
-        //}
-        if let Some(manager_peers_changed) = gen::manager::ManagerPeersChanged::from_message(&msg) {
-            return Some(Signal::Manager(manager::Signal::PeersChanged(manager::PeersChanged {inner: manager_peers_changed})));
+    pub(crate) fn from_message(msg: &Message) -> Result<Self, Error> {
+        match manager::Signal::from_message(msg).map(|m| Signal::Manager(m)) {
+            Ok(msg) => { return Ok(msg); },
+            Err(Error::SignalError(SignalError::NoMatch(_))) => {},
+            e @ Err(_) => { return e; },
+
         }
 
         // Technology signals
@@ -107,6 +113,6 @@ impl Signal {
         //    return Some(Signal::Service(ServiceSignal::PropertyChanged(ServicePropertyChanged{inner: service_property_changed})));
         //}
 
-        None
+        Err(SignalError::NoMatch(Cow::Borrowed("[Unknown]")).into())
     }
 }
