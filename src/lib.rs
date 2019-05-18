@@ -108,48 +108,26 @@ impl SignalsHandle {
                     return Either::A(futures::future::ok::<(),()>(()))
                 };
 
-                let publish_fut = {
-                    let fut_vec = {
-                        /*if let Ok(subs) = subs_clone.try_borrow_mut() {
+                let publish_fut =
+                    subs_clone.try_borrow_mut().map_err(|_| (()))
+                        .map(move |subs: RefMut<Vec<mpsc::Sender<String>>>| {
                             let msg_clone = signal.clone();
-                            let fut_vec = subs.iter().cloned()
-                                .map(move |mut sub: mpsc::Sender<String>| {
+                            let fut_vec: Vec<_> = subs.iter().cloned()
+                                .map(move |mut sub| {
                                     sub.send(msg_clone.clone())
                                         //.map_err(())
                                         .then(|res| {
                                             if res.is_err() {
                                                 println!("Failed to dispatch message to subscriber");
                                             }
-                                            futures::future::ok::<(),()>(())
-                                            //Ok(())
+                                            Ok(())
                                         })
                                 }).collect();
-                            Ok(fut_vec)
-                        } else { Err(()) }*/
-                        subs_clone
-                            .try_borrow_mut().map_err(|_| (()))
-                            .map(move |subs: RefMut<Vec<mpsc::Sender<String>>>| {
-                                let msg_clone = signal.clone();
-                                let fut_vec: Vec<_> = subs.iter().cloned()
-                                    .map(move |mut sub| {
-                                        sub.send(msg_clone.clone())
-                                            //.map_err(())
-                                            .then(|res| {
-                                                if res.is_err() {
-                                                    println!("Failed to dispatch message to subscriber");
-                                                }
-                                                futures::future::ok::<(),()>(())
-                                                //Ok(())
-                                            })
-                                    }).collect();
-                                fut_vec
-                            })
-                    };
-                    fut_vec
+                            fut_vec
+                        })
                         .into_future()
                         .and_then(|fut_vec| stream::futures_unordered(fut_vec).for_each(|_| Ok::<(),()>(())))
-                        .then(|_| Ok::<(),()>(()))
-                };
+                        .then(|_| Ok::<(),()>(()));
 
                 Either::B(publish_fut)
             }).for_each(|_| Ok::<(),()>(()))
