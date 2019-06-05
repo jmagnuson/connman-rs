@@ -4,6 +4,9 @@ use futures::Future;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+#[cfg(feature = "introspection")]
+use xml::reader::EventReader;
+
 use super::gen::service::Service as IService;
 use super::Error;
 
@@ -40,6 +43,18 @@ impl Service {
 }
 
 impl Service {
+    #[cfg(feature = "introspection")]
+    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=Error> {
+        use crate::api::gen::service::OrgFreedesktopDBusIntrospectable as Introspectable;
+
+        Introspectable::introspect(&self.connpath(self.connection.clone()))
+            .map_err(|e| e.into())
+            .map(|s| {
+                let rdr = std::io::Cursor::new(s.into_bytes());
+                EventReader::new(rdr)
+            })
+    }
+
     pub fn connect(&self) -> impl Future<Item=(), Error=Error> {
         let connpath = self.connpath(self.connection.clone());
         IService::connect(&connpath).map_err(|e| e.into())

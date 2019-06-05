@@ -3,6 +3,9 @@ use dbus::ConnPath;
 use dbus_tokio::AConnection;
 use futures::Future;
 
+#[cfg(feature = "introspection")]
+use xml::reader::EventReader;
+
 use super::gen::manager::Manager as IManager;
 use super::service::Service;
 use super::technology::Technology;
@@ -64,6 +67,18 @@ impl Manager {
 }
 
 impl Manager {
+    #[cfg(feature = "introspection")]
+    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=Error> {
+        use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;
+
+        Introspectable::introspect(&Self::connpath(self.connection.clone()))
+            .map_err(|e| e.into())
+            .map(|s| {
+                let rdr = std::io::Cursor::new(s.into_bytes());
+                EventReader::new(rdr)
+            })
+    }
+
     pub fn get_state(&self) -> impl Future<Item=State, Error=Error> {
         let connpath = Self::connpath(self.connection.clone());
         IManager::get_properties(&connpath)

@@ -19,9 +19,19 @@ path = "src/lib.rs"
 name = "wifi_scan_list"
 path = "examples/wifi_scan_list.rs"
 
+[[example]]
+name = "wifi_introspect"
+path = "examples/wifi_introspect.rs"
+required-features = ["introspection"]
+
+[features]
+default = []
+introspection = ["xml-rs"]
+
 [dependencies]
 dbus = "0.6"
 dbus-tokio = "0.3"
 failure = "0.1"
 futures = "0.1"
 tokio = "0.1"
+xml-rs = { version = "0.3", optional = true }
