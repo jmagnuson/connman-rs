@@ -1,0 +1,32 @@
+language: rust
+dist: xenial
+sudo: required
+
+rust:
+  - stable
+
+before_install:
+  - sudo apt-get update
+  - ci/connman.sh prep
+  - ci/connman.sh build
+  - ci/wpa_supplicant.sh prep
+  - ci/wpa_supplicant.sh build
+  - ci/hostapd.sh prep
+  - ci/hostapd.sh build
+
+before_script:
+  - ci/wpa_supplicant.sh run
+  - ci/connman.sh run
+  - sudo ifconfig wlan1 up
+  - ci/hostapd.sh run
+  - sleep 5
+  - sudo iw dev wlan0 scan || echo "wlan0 busy, keep going"
+  - sudo connmanctl services
+
+script:
+  - cargo test
+  - source $HOME/.cargo/env && cargo build --example wifi_scan_list
+  - source $HOME/.cargo/env && cargo build --features=introspection --example wifi_introspect
+  - sudo target/debug/examples/wifi_introspect
+  - sudo target/debug/examples/wifi_scan_list
+
