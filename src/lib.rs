@@ -18,11 +18,13 @@
 //! extern crate connman;
 //! extern crate dbus;
 //! extern crate dbus_tokio;
+//! extern crate futures;
 //! extern crate tokio;
 //!
 //! use connman::Manager;
 //! use dbus::{BusType, Connection};
 //! use dbus_tokio::AConnection;
+//! use futures::Future;
 //! use tokio::reactor::Handle;
 //! use tokio::runtime::current_thread::Runtime;
 //!
