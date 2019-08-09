@@ -6,14 +6,12 @@ CONNMAN_SRC_PATH="./connman"
 
 do_action_prep() {
     sudo apt install \
-        linux-modules-extra-`uname -r` \
         dbus \
         libdbus-1-dev \
         gnutls-dev \
         gnutls-bin \
         xtables-addons-common \
         xtables-addons-source \
-        rfkill
 
     # TODO: Install deps to be able to run stock `bootstrap-config`
     #sudo apt install openconnect
@@ -21,18 +19,6 @@ do_action_prep() {
     #sudo apt install nftables
     #sudo apt install libnftnl-dev
     #sudo apt install vpnc
-
-    sudo modprobe mac80211_hwsim radios=2 fake_hw_scan=1
-
-    sudo rfkill unblock all
-
-    iw reg set US
-
-    # STA
-    sudo ifconfig wlan0 up 192.168.1.2
-
-    # AP (used by hostapd)
-    sudo ifconfig wlan1 up 192.168.1.1
 
     git clone --depth 1 -b 1.36 \
         https://git.kernel.org/pub/scm/network/connman/connman.git \
