@@ -7,6 +7,7 @@ rust:
 
 before_install:
   - sudo apt-get update
+  - ci/network.sh prep
   - ci/connman.sh prep
   - ci/connman.sh build
   - ci/wpa_supplicant.sh prep
