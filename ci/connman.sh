@@ -43,9 +43,6 @@ do_action_run() {
 
     # Make sure wifi is enabled
     sudo connmanctl enable wifi
-
-    sudo ifconfig wlan0 down
-    sudo ifconfig wlan0 up
 }
 
 action="$1"
