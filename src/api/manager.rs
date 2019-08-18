@@ -46,7 +46,9 @@ impl Manager {
             .map_err(Error::from)
             .map(move |v|
                 v.into_iter()
-                    .map(|(path, args)| Technology::new(connclone.clone(), path, args))
+                    .filter_map(|(path, args)| {
+                        Technology::new(connclone.clone(), path, args).ok()
+                    })
                     .collect()
             )
     }
