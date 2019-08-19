@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 
+### Added
+- Introspection functionality via `introspect` feature
+- Property functions for Manager
+- Parsed properties for Technology and Service
+
 ## [0.1.1]
 
 ### Added
