@@ -48,12 +48,12 @@ impl From<dbus::Error> for Error {
 fn get_property<T: Clone + 'static>(
     properties: &RefArgMap,
     prop_name: &'static str,
-) -> Result<T, Error> {
+) -> Result<T, PropertyError> {
     properties.get(prop_name)
-        .ok_or(PropertyError::NotPresent(Cow::Borrowed(prop_name)).into())
+        .ok_or_else(|| PropertyError::NotPresent(Cow::Borrowed(prop_name)))
         .and_then(|variant|
             cast::<T>(&variant.0).cloned()
-                .ok_or(PropertyError::Cast(Cow::Borrowed(prop_name)).into())
+                .ok_or_else(|| PropertyError::Cast(Cow::Borrowed(prop_name)))
         )
 }
 
@@ -61,11 +61,11 @@ fn get_property<T: Clone + 'static>(
 fn get_property_fromstr<T: FromStr + 'static>(
     properties: &RefArgMap,
     prop_name: &'static str,
-) -> Result<T, Error> {
+) -> Result<T, PropertyError> {
     properties.get(prop_name)
-        .ok_or(PropertyError::NotPresent(Cow::Borrowed(prop_name)).into())
+        .ok_or_else(|| PropertyError::NotPresent(Cow::Borrowed(prop_name)))
         .and_then(|variant| variant.as_str()
             .and_then(|s| T::from_str(s).ok())
-            .ok_or(PropertyError::Cast(Cow::Borrowed(prop_name)).into())
+            .ok_or_else(|| PropertyError::Cast(Cow::Borrowed(prop_name)))
         )
 }
