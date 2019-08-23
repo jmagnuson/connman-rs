@@ -7,7 +7,7 @@ use futures::Future;
 use xml::reader::EventReader;
 
 use super::gen::manager::Manager as IManager;
-use super::service::Service;
+use super::service::{Service, Properties as ServiceProperties};
 use super::technology::Technology;
 use super::Error;
 use std::str::FromStr;
@@ -16,14 +16,14 @@ use std::rc::Rc;
 /// Futures-aware wrapper struct for connman Manager object.
 #[derive(Clone, Debug)]
 pub struct Manager {
-    connection: Rc<AConnection>,
+    connpath: ConnPath<'static, Rc<AConnection>>,
     // TODO: Signal subscription/dispatcher
 }
 
 impl Manager {
     pub fn new(connection: Rc<AConnection>) -> Self {
         Manager {
-            connection
+            connpath: Self::connpath(connection),
         }
     }
 
@@ -40,27 +40,29 @@ impl Manager {
 
 impl Manager {
     pub fn get_technologies(&self) -> impl Future<Item=Vec<Technology>, Error=Error> {
-        let connclone = self.connection.clone();
+        let connclone = self.connpath.conn.clone();
 
-        let connpath = Self::connpath(connclone.clone());
-        IManager::get_technologies(&connpath)
-            .map_err(|e| e.into())
+        IManager::get_technologies(&self.connpath)
+            .map_err(Error::from)
             .map(move |v|
                 v.into_iter()
-                    .map(|(path, args)| Technology::new(connclone.clone(), path, args))
+                    .filter_map(|(path, args)| {
+                        Technology::new(connclone.clone(), path, args).ok()
+                    })
                     .collect()
             )
     }
 
     pub fn get_services(&self) -> impl Future<Item=Vec<Service>, Error=Error> {
-        let connclone = self.connection.clone();
+        let connclone = self.connpath.conn.clone();
 
-        let connpath = Self::connpath(connclone.clone());
-        IManager::get_services(&connpath)
-            .map_err(|e| e.into())
+        IManager::get_services(&self.connpath)
+            .map_err(Error::from)
             .map(move |v|
                 v.into_iter()
-                    .map(|(path, args)| Service::new(connclone.clone(), path, args))
+                    .filter_map(|(path, args)| {
+                        Service::new(connclone.clone(), path, args).ok()
+                    })
                     .collect()
             )
     }
@@ -71,8 +73,8 @@ impl Manager {
     pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=Error> {
         use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&Self::connpath(self.connection.clone()))
-            .map_err(|e| e.into())
+        Introspectable::introspect(&self.connpath)
+            .map_err(Error::from)
             .map(|s| {
                 let rdr = std::io::Cursor::new(s.into_bytes());
                 EventReader::new(rdr)
@@ -80,27 +82,26 @@ impl Manager {
     }
 
     pub fn get_state(&self) -> impl Future<Item=State, Error=Error> {
-        let connpath = Self::connpath(self.connection.clone());
-        IManager::get_properties(&connpath)
-            .map_err(|e| e.into())
+        IManager::get_properties(&self.connpath)
+            .map_err(Error::from)
             .and_then(move |a|
                 super::get_property_fromstr::<State>(&a, "State")
+                    .map_err(Error::from)
             )
     }
 
     pub fn get_offline_mode(&self) -> impl Future<Item=bool, Error=Error> {
-        let connpath = Self::connpath(self.connection.clone());
-        IManager::get_properties(&connpath)
-            .map_err(|e| e.into())
+        IManager::get_properties(&self.connpath)
+            .map_err(Error::from)
             .and_then(move |a|
                 super::get_property::<bool>(&a, "OfflineMode")
+                    .map_err(Error::from)
             )
     }
 
     pub fn set_offline_mode(&self, offline_mode: bool) -> impl Future<Item=(), Error=Error> {
-        let connpath = Self::connpath(self.connection.clone());
-        IManager::set_property(&connpath, "OfflineMode", Variant(offline_mode))
-            .map_err(|e| e.into())
+        IManager::set_property(&self.connpath, "OfflineMode", Variant(offline_mode))
+            .map_err(Error::from)
     }
 }
 

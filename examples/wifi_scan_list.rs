@@ -7,7 +7,6 @@ use std::rc::Rc;
 
 use connman::api::Error as ConnmanError;
 use connman::{Manager, Technology};
-use dbus::arg::RefArg;
 use dbus::{BusType, Connection};
 use dbus_tokio::AConnection;
 use futures::Future;
@@ -22,7 +21,7 @@ pub fn get_technology_wifi(
         // Filter out the wifi technology (eventually this will be a simple library call)
         .map(|v| {
             v.into_iter().find(move |t| {
-                t.args.get("Type").and_then(|variant| variant.as_str()) == Some("wifi")
+                t.props.type_ == connman::api::technology::Type::Wifi
             })
         })
 }
