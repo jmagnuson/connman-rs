@@ -12,13 +12,13 @@ use std::rc::Rc;
 
 pub trait OrgFreedesktopDBusIntrospectable {
     type Err;
-    fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>>;
+    fn introspect(&self) -> Box<dyn Future<Item=String, Error=Self::Err>>;
 }
 
 impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>> {
+    fn introspect(&self) -> Box<dyn Future<Item=String, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"org.freedesktop.DBus.Introspectable".into(), &"Introspect".into());
         let introspect_fut = self.conn
             .method_call(msg)
@@ -51,29 +51,29 @@ impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>
 
 pub trait Manager {
     type Err;
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>>;
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn get_technologies(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>>;
-    fn remove_provider(&self, provider: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn get_services(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>>;
-    fn get_peers(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>>;
-    fn connect_provider(&self, provider: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>) -> Box<Future<Item=dbus::Path<'static>, Error=Self::Err>>;
-    fn register_agent(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn unregister_agent(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn register_counter(&self, path: dbus::Path, accuracy: u32, period: u32) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn unregister_counter(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn create_session(&self, settings: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>, notifier: dbus::Path) -> Box<Future<Item=dbus::Path<'static>, Error=Self::Err>>;
-    fn destroy_session(&self, session: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn request_private_network(&self) -> Box<Future<Item=(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, dbus::OwnedFd), Error=Self::Err>>;
-    fn release_private_network(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn register_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>, master: bool) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn unregister_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>) -> Box<Future<Item=(), Error=Self::Err>>;
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>>;
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn get_technologies(&self) -> Box<dyn Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>, Error=Self::Err>>;
+    fn remove_provider(&self, provider: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn get_services(&self) -> Box<dyn Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>, Error=Self::Err>>;
+    fn get_peers(&self) -> Box<dyn Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>, Error=Self::Err>>;
+    fn connect_provider(&self, provider: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>) -> Box<dyn Future<Item=dbus::Path<'static>, Error=Self::Err>>;
+    fn register_agent(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn unregister_agent(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn register_counter(&self, path: dbus::Path, accuracy: u32, period: u32) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn unregister_counter(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn create_session(&self, settings: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>, notifier: dbus::Path) -> Box<dyn Future<Item=dbus::Path<'static>, Error=Self::Err>>;
+    fn destroy_session(&self, session: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn request_private_network(&self) -> Box<dyn Future<Item=(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, dbus::OwnedFd), Error=Self::Err>>;
+    fn release_private_network(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn register_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>, master: bool) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn unregister_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>) -> Box<dyn Future<Item=(), Error=Self::Err>>;
 }
 
 impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>> {
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetProperties".into());
         let get_properties_fut = self.conn
             .method_call(msg)
@@ -90,7 +90,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>> =
+                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -103,7 +103,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_properties_fut)
     }
 
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"SetProperty".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -130,7 +130,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(set_property_fut)
     }
 
-    fn get_technologies(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>> {
+    fn get_technologies(&self) -> Box<dyn Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetTechnologies".into());
         let get_technologies_fut = self.conn
             .method_call(msg)
@@ -147,7 +147,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let technologies: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)> =
+                        let technologies: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -160,7 +160,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_technologies_fut)
     }
 
-    fn remove_provider(&self, provider: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn remove_provider(&self, provider: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"RemoveProvider".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -186,7 +186,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(remove_provider_fut)
     }
 
-    fn get_services(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>> {
+    fn get_services(&self) -> Box<dyn Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetServices".into());
         let get_services_fut = self.conn
             .method_call(msg)
@@ -203,7 +203,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let services: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)> =
+                        let services: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -216,7 +216,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_services_fut)
     }
 
-    fn get_peers(&self) -> Box<Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>, Error=Self::Err>> {
+    fn get_peers(&self) -> Box<dyn Future<Item=Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"GetPeers".into());
         let get_peers_fut = self.conn
             .method_call(msg)
@@ -233,7 +233,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let peers: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)> =
+                        let peers: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -246,7 +246,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_peers_fut)
     }
 
-    fn connect_provider(&self, provider: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>) -> Box<Future<Item=dbus::Path<'static>, Error=Self::Err>> {
+    fn connect_provider(&self, provider: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>) -> Box<dyn Future<Item=dbus::Path<'static>, Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"ConnectProvider".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -280,7 +280,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(connect_provider_fut)
     }
 
-    fn register_agent(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn register_agent(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"RegisterAgent".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -306,7 +306,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(register_agent_fut)
     }
 
-    fn unregister_agent(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn unregister_agent(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"UnregisterAgent".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -332,7 +332,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(unregister_agent_fut)
     }
 
-    fn register_counter(&self, path: dbus::Path, accuracy: u32, period: u32) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn register_counter(&self, path: dbus::Path, accuracy: u32, period: u32) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"RegisterCounter".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -360,7 +360,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(register_counter_fut)
     }
 
-    fn unregister_counter(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn unregister_counter(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"UnregisterCounter".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -386,7 +386,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(unregister_counter_fut)
     }
 
-    fn create_session(&self, settings: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>, notifier: dbus::Path) -> Box<Future<Item=dbus::Path<'static>, Error=Self::Err>> {
+    fn create_session(&self, settings: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>, notifier: dbus::Path) -> Box<dyn Future<Item=dbus::Path<'static>, Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"CreateSession".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -421,7 +421,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(create_session_fut)
     }
 
-    fn destroy_session(&self, session: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn destroy_session(&self, session: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"DestroySession".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -447,7 +447,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(destroy_session_fut)
     }
 
-    fn request_private_network(&self) -> Box<Future<Item=(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, dbus::OwnedFd), Error=Self::Err>> {
+    fn request_private_network(&self) -> Box<dyn Future<Item=(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, dbus::OwnedFd), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"RequestPrivateNetwork".into());
         let request_private_network_fut = self.conn
             .method_call(msg)
@@ -471,7 +471,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
                             },
                             Ok(o) => o
                         };
-                        let settings: ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>> =
+                        let settings: ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -491,7 +491,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(request_private_network_fut)
     }
 
-    fn release_private_network(&self, path: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn release_private_network(&self, path: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"ReleasePrivateNetwork".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -517,7 +517,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(release_private_network_fut)
     }
 
-    fn register_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>, master: bool) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn register_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>, master: bool) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"RegisterPeerService".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -544,7 +544,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(register_peer_service_fut)
     }
 
-    fn unregister_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<arg::RefArg>>>) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn unregister_peer_service(&self, specification: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Manager".into(), &"UnregisterPeerService".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -574,7 +574,7 @@ impl<'a> Manager for dbus::ConnPath<'a, Rc<AConnection>> {
 #[derive(Debug, Default)]
 pub struct ManagerPropertyChanged {
     pub name: String,
-    pub value: arg::Variant<Box<arg::RefArg + 'static>>,
+    pub value: arg::Variant<Box<dyn arg::RefArg + 'static>>,
 }
 
 impl dbus::SignalArgs for ManagerPropertyChanged {
@@ -594,7 +594,7 @@ impl dbus::SignalArgs for ManagerPropertyChanged {
 #[derive(Debug, Default)]
 pub struct ManagerTechnologyAdded {
     pub path: dbus::Path<'static>,
-    pub properties: ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>,
+    pub properties: ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>,
 }
 
 impl dbus::SignalArgs for ManagerTechnologyAdded {
@@ -630,7 +630,7 @@ impl dbus::SignalArgs for ManagerTechnologyRemoved {
 
 #[derive(Debug, Default)]
 pub struct ManagerServicesChanged {
-    pub changed: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>,
+    pub changed: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>,
     pub removed: Vec<dbus::Path<'static>>,
 }
 
@@ -650,7 +650,7 @@ impl dbus::SignalArgs for ManagerServicesChanged {
 
 #[derive(Debug, Default)]
 pub struct ManagerPeersChanged {
-    pub changed: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>)>,
+    pub changed: Vec<(dbus::Path<'static>, ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>)>,
     pub removed: Vec<dbus::Path<'static>>,
 }
 
@@ -670,14 +670,14 @@ impl dbus::SignalArgs for ManagerPeersChanged {
 
 pub trait Clock {
     type Err;
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>>;
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>>;
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>>;
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>>;
 }
 
 impl<'a> Clock for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>> {
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Clock".into(), &"GetProperties".into());
         let get_properties_fut = self.conn
             .method_call(msg)
@@ -694,7 +694,7 @@ impl<'a> Clock for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>> =
+                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -707,7 +707,7 @@ impl<'a> Clock for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_properties_fut)
     }
 
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Clock".into(), &"SetProperty".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -738,7 +738,7 @@ impl<'a> Clock for dbus::ConnPath<'a, Rc<AConnection>> {
 #[derive(Debug, Default)]
 pub struct ClockPropertyChanged {
     pub name: String,
-    pub value: arg::Variant<Box<arg::RefArg + 'static>>,
+    pub value: arg::Variant<Box<dyn arg::RefArg + 'static>>,
 }
 
 impl dbus::SignalArgs for ClockPropertyChanged {
