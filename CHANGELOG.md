@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 
+### Changed
+- Make Service properties public
+
 ## [0.1.2] - 2019-09-04
 
 ### Added

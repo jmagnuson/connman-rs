@@ -20,7 +20,7 @@ use dbus::arg::{Variant, RefArg, cast};
 #[derive(Debug)]
 pub struct Service {
     connpath: ConnPath<'static, Rc<AConnection>>,
-    properties: Properties,
+    pub props: Properties,
 }
 
 impl Service {
@@ -34,7 +34,7 @@ impl Service {
 
         Ok(Service {
             connpath: Self::connpath(path, connection),
-            properties,
+            props: properties,
         })
     }
 
@@ -90,58 +90,58 @@ impl Service {
 #[derive(Debug)]
 pub struct Properties {
     /// Connection state
-    state: State,
+    pub state: State,
     /// Error reason; only valid for `State::Failure`
-    error: Option<Error>,
+    pub error: Option<Error>,
     /// Service name
-    name: Option<String>,
+    pub name: Option<String>,
     /// Service name
-    type_: Option<Type>,
+    pub type_: Option<Type>,
     /// Service name
     // TODO: enum variants?
-    security: Option<Vec<String>>,
+    pub security: Option<Vec<String>>,
     /// Signal strength
-    strength: Option<u8>,
+    pub strength: Option<u8>,
     /// Set if favorite or User-selected
-    favorite: bool,
+    pub favorite: bool,
     /// Set if configured externally
-    immutable: bool,
+    pub immutable: bool,
     /// Whether or not to automatically connect if no other connection
-    autoconnect: bool,
+    pub autoconnect: bool,
     /// Set if service is roaming
-    roaming: Option<bool>,
+    pub roaming: Option<bool>,
     /// List of currently-active nameservers
-    nameservers: Vec<String>, // TODO: Deserialize `String` into `IpAddr`?
+    pub nameservers: Vec<String>, // TODO: Deserialize `String` into `IpAddr`?
     /// List of manually-configured nameservers
-    nameservers_config: Vec<String>, // TODO: Deserialize `String` into `IpAddr`?
+    pub nameservers_config: Vec<String>, // TODO: Deserialize `String` into `IpAddr`?
     /// List of currently-active timeservers
-    timeservers: Vec<String>,
+    pub timeservers: Vec<String>,
     /// List of manually-configured timeservers
-    timeservers_config: Vec<String>,
+    pub timeservers_config: Vec<String>,
     /// List of currently-used search domains
-    domains: Vec<String>,
+    pub domains: Vec<String>,
     /// List of manually-configured search domains
-    domains_config: Vec<String>,
+    pub domains_config: Vec<String>,
     /// Ipv4 related information
-    ipv4: Ipv4,
+    pub ipv4: Ipv4,
     /// Ipv4 config related information
-    ipv4_config: Ipv4,
+    pub ipv4_config: Ipv4,
     /// Ipv6 related information
-    ipv6: Ipv6,
+    pub ipv6: Ipv6,
     /// Ipv6 config related information
-    ipv6_config: Ipv6,
+    pub ipv6_config: Ipv6,
     /// Proxy related information
-    proxy: Proxy,
+    pub proxy: Proxy,
     /// Proxy config related information
-    proxy_config: Proxy,
+    pub proxy_config: Proxy,
     /// Provider (VPN) related information
-    provider: Provider,
+    pub provider: Provider,
     /// Ethernet related information
-    ethernet: Ethernet,
+    pub ethernet: Ethernet,
     /// Whether or not mDNS support is enabled
-    mdns: Option<bool>,
+    pub mdns: Option<bool>,
     /// Whether or not mDNS (config) support is enabled
-    mdns_config: Option<bool>,
+    pub mdns_config: Option<bool>,
 }
 
 impl FromProperties for State {
