@@ -221,7 +221,7 @@ impl FromProperties for Ipv6 {
 impl FromProperties for Proxy {
     fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
         let mut i = get_property_argiter(properties, prop_name)?;
-        let mut m: HashMap<&str, &RefArg> = HashMap::new();
+        let mut m: HashMap<&str, &dyn RefArg> = HashMap::new();
         while let Some(key) = i.next().and_then(|k| k.as_str()) {
             if let Some(val) = i.next() {
                 let _ = m.insert(key, val);

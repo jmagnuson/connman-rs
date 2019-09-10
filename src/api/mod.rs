@@ -14,9 +14,9 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-type RefArgMap = HashMap<String, Variant<Box<RefArg + 'static>>>;
-type RefArgMapRef<'a> = HashMap<String, &'a RefArg>;
-type RefArgIter<'a> = Box<Iterator<Item=&'a RefArg> + 'a>;
+type RefArgMap = HashMap<String, Variant<Box<dyn RefArg + 'static>>>;
+type RefArgMapRef<'a> = HashMap<String, &'a dyn RefArg>;
+type RefArgIter<'a> = Box<dyn Iterator<Item=&'a dyn RefArg> + 'a>;
 
 #[derive(Debug, Fail)]
 pub enum Error {
