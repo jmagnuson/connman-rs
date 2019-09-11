@@ -12,7 +12,7 @@ do_action_build() {
     cd ${HOSTAP_SRC_PATH}/hostapd
     cp defconfig .config
     make clean
-    make
+    make -j3
     sudo make install
     cd ../..
 }
