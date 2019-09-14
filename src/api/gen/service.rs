@@ -12,13 +12,13 @@ use std::rc::Rc;
 
 pub trait OrgFreedesktopDBusIntrospectable {
     type Err;
-    fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>>;
+    fn introspect(&self) -> Box<dyn Future<Item=String, Error=Self::Err>>;
 }
 
 impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>> {
+    fn introspect(&self) -> Box<dyn Future<Item=String, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"org.freedesktop.DBus.Introspectable".into(), &"Introspect".into());
         let introspect_fut = self.conn
             .method_call(msg)
@@ -51,21 +51,21 @@ impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>
 
 pub trait Service {
     type Err;
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>>;
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn clear_property(&self, name: &str) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn connect(&self) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn disconnect(&self) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn remove(&self) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn move_before(&self, service: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn move_after(&self, service: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn reset_counters(&self) -> Box<Future<Item=(), Error=Self::Err>>;
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>>;
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn clear_property(&self, name: &str) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn connect(&self) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn disconnect(&self) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn remove(&self) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn move_before(&self, service: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn move_after(&self, service: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn reset_counters(&self) -> Box<dyn Future<Item=(), Error=Self::Err>>;
 }
 
 impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>> {
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"GetProperties".into());
         let get_properties_fut = self.conn
             .method_call(msg)
@@ -82,7 +82,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>> =
+                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -95,7 +95,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_properties_fut)
     }
 
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"SetProperty".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -122,7 +122,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(set_property_fut)
     }
 
-    fn clear_property(&self, name: &str) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn clear_property(&self, name: &str) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"ClearProperty".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -148,7 +148,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(clear_property_fut)
     }
 
-    fn connect(&self) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn connect(&self) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"Connect".into());
         let connect_fut = self.conn
             .method_call(msg)
@@ -170,7 +170,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(connect_fut)
     }
 
-    fn disconnect(&self) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn disconnect(&self) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"Disconnect".into());
         let disconnect_fut = self.conn
             .method_call(msg)
@@ -192,7 +192,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(disconnect_fut)
     }
 
-    fn remove(&self) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn remove(&self) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"Remove".into());
         let remove_fut = self.conn
             .method_call(msg)
@@ -214,7 +214,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(remove_fut)
     }
 
-    fn move_before(&self, service: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn move_before(&self, service: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"MoveBefore".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -240,7 +240,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(move_before_fut)
     }
 
-    fn move_after(&self, service: dbus::Path) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn move_after(&self, service: dbus::Path) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"MoveAfter".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -266,7 +266,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(move_after_fut)
     }
 
-    fn reset_counters(&self) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn reset_counters(&self) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Service".into(), &"ResetCounters".into());
         let reset_counters_fut = self.conn
             .method_call(msg)
@@ -292,7 +292,7 @@ impl<'a> Service for dbus::ConnPath<'a, Rc<AConnection>> {
 #[derive(Debug, Default)]
 pub struct ServicePropertyChanged {
     pub name: String,
-    pub value: arg::Variant<Box<arg::RefArg + 'static>>,
+    pub value: arg::Variant<Box<dyn arg::RefArg + 'static>>,
 }
 
 impl dbus::SignalArgs for ServicePropertyChanged {

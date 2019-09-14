@@ -12,13 +12,13 @@ use std::rc::Rc;
 
 pub trait OrgFreedesktopDBusIntrospectable {
     type Err;
-    fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>>;
+    fn introspect(&self) -> Box<dyn Future<Item=String, Error=Self::Err>>;
 }
 
 impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn introspect(&self) -> Box<Future<Item=String, Error=Self::Err>> {
+    fn introspect(&self) -> Box<dyn Future<Item=String, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"org.freedesktop.DBus.Introspectable".into(), &"Introspect".into());
         let introspect_fut = self.conn
             .method_call(msg)
@@ -51,15 +51,15 @@ impl<'a> OrgFreedesktopDBusIntrospectable for dbus::ConnPath<'a, Rc<AConnection>
 
 pub trait Technology {
     type Err;
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>>;
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>>;
-    fn scan(&self) -> Box<Future<Item=(), Error=Self::Err>>;
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>>;
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>>;
+    fn scan(&self) -> Box<dyn Future<Item=(), Error=Self::Err>>;
 }
 
 impl<'a> Technology for dbus::ConnPath<'a, Rc<AConnection>> {
     type Err = DbusError;
 
-    fn get_properties(&self) -> Box<Future<Item=::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>>, Error=Self::Err>> {
+    fn get_properties(&self) -> Box<dyn Future<Item=::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>>, Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Technology".into(), &"GetProperties".into());
         let get_properties_fut = self.conn
             .method_call(msg)
@@ -76,7 +76,7 @@ impl<'a> Technology for dbus::ConnPath<'a, Rc<AConnection>> {
                         }
                     }).and_then(|_m| {
                         let mut i = _m.iter_init();
-                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<arg::RefArg + 'static>>> =
+                        let properties: ::std::collections::HashMap<String, arg::Variant<Box<dyn arg::RefArg + 'static>>> =
                         match i.read() {
                             Err(_e) => {
                                 return Err(DbusError::new_custom("org.freedesktop.DBus.Failed", "type mismatch"));
@@ -89,7 +89,7 @@ impl<'a> Technology for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(get_properties_fut)
     }
 
-    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn set_property<I1: arg::Arg + arg::Append>(&self, name: &str, value: arg::Variant<I1>) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let mut msg = Message::method_call(&self.dest, &self.path, &"net.connman.Technology".into(), &"SetProperty".into());
         {
             let mut i = arg::IterAppend::new(&mut msg);
@@ -116,7 +116,7 @@ impl<'a> Technology for dbus::ConnPath<'a, Rc<AConnection>> {
         Box::new(set_property_fut)
     }
 
-    fn scan(&self) -> Box<Future<Item=(), Error=Self::Err>> {
+    fn scan(&self) -> Box<dyn Future<Item=(), Error=Self::Err>> {
         let msg = Message::method_call(&self.dest, &self.path, &"net.connman.Technology".into(), &"Scan".into());
         let scan_fut = self.conn
             .method_call(msg)
@@ -142,7 +142,7 @@ impl<'a> Technology for dbus::ConnPath<'a, Rc<AConnection>> {
 #[derive(Debug, Default)]
 pub struct TechnologyPropertyChanged {
     pub name: String,
-    pub value: arg::Variant<Box<arg::RefArg + 'static>>,
+    pub value: arg::Variant<Box<dyn arg::RefArg + 'static>>,
 }
 
 impl dbus::SignalArgs for TechnologyPropertyChanged {

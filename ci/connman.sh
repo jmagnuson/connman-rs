@@ -3,6 +3,7 @@
 set -x
 
 CONNMAN_SRC_PATH="./connman"
+CONNMAND_PATH="src/connmand"
 
 do_action_prep() {
     sudo apt install \
@@ -22,14 +23,18 @@ do_action_prep() {
 
     git clone --depth 1 -b 1.36 \
         https://git.kernel.org/pub/scm/network/connman/connman.git \
-        ${CONNMAN_SRC_PATH}
+        ${CONNMAN_SRC_PATH} || echo "connman repo already exists"
 }
 
 do_action_build() {
     cd ${CONNMAN_SRC_PATH}
-    ./bootstrap
-    ./configure
-    make
+
+    # only build if daemon doesn't already exist (from cache)
+    if [ ! -f "${CONNMAND_PATH}" ]; then
+        ./bootstrap
+        ./configure
+        make
+    fi
     sudo make install
     cd ..
 

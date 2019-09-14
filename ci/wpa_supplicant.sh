@@ -13,7 +13,7 @@ do_action_prep() {
 
     git clone --depth 1 -b hostap_2_7 \
         git://w1.fi/hostap.git \
-        ${HOSTAP_SRC_PATH}
+        ${HOSTAP_SRC_PATH} || echo "hostap/supplicant repo already exists"
 }
 
 do_action_build() {
@@ -26,7 +26,7 @@ CONFIG_CTRL_IFACE_DBUS_NEW=y
 CONFIG_CTRL_IFACE_DBUS_INTRO=y
 EOF
 
-    make
+    make -j3
     sudo make install
     cd ../..
 }
