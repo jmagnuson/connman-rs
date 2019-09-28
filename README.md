@@ -1,6 +1,7 @@
 # connman-rs
 
 [![crates.io](http://meritbadge.herokuapp.com/connman)](https://crates.io/crates/connman)
+[![Build Status](https://travis-ci.org/jmagnuson/connman-rs.svg?branch=master)](https://travis-ci.org/jmagnuson/connman-rs)
 
 A [ConnMan] API library that abstracts the D-Bus layer using `dbus-tokio` and
 `futures`.

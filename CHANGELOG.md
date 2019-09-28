@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 
+## [0.1.3] - 2019-09-28
+
 ### Changed
 - Make Service properties public
 
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Initial `dbus-codegen` files
 - Initial API functionality for Manager, Service, and Technology
 
-[Unreleased]: https://github.com/jmagnuson/connman-rs/compare/v0.1.2...master
+[Unreleased]: https://github.com/jmagnuson/connman-rs/compare/v0.1.3...master
+[0.1.3]: https://github.com/jmagnuson/connman-rs/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/jmagnuson/connman-rs/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/jmagnuson/connman-rs/compare/6a8458f...v0.1.1
