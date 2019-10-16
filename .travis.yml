@@ -1,5 +1,5 @@
 language: rust
-dist: xenial
+dist: bionic
 sudo: required
 
 rust:
@@ -18,20 +18,29 @@ before_install:
 before_script:
   - ci/wpa_supplicant.sh run
   - ci/connman.sh run
-  - sudo ifconfig wlan1 up
   - ci/hostapd.sh run
   - sleep 5
-  - sudo iw dev wlan0 scan || echo "wlan0 busy, keep going"
+  - sudo connmanctl scan wifi
+  - sleep 5
   - sudo connmanctl services
 
 script:
   - cargo test
-  - source $HOME/.cargo/env && cargo build --example wifi_scan_list
-  - source $HOME/.cargo/env && cargo build --features=introspection --example wifi_introspect
+  - cargo build --example wifi_scan_list
+  - cargo build --features=introspection --example wifi_introspect
+  - cargo build --example wifi_connect
   - sudo target/debug/examples/wifi_introspect
   - sudo target/debug/examples/wifi_scan_list
+  - sudo mkdir -p /usr/local/var/lib/connman
+  - sudo target/debug/examples/wifi_connect -p mypassword myssid
+  - sleep 5
+  - sudo connmanctl services
+  - sudo target/debug/examples/wifi_connect --disconnect myssid
+  - sudo connmanctl services
 
 cache:
   cargo: true
   directories:
     - connman
+    - hostap
+    - supplicant

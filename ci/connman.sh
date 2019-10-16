@@ -2,6 +2,7 @@
 
 set -x
 
+CONNMAN_SETTINGS_PATH="/usr/local/var/lib/connman"
 CONNMAN_SRC_PATH="./connman"
 CONNMAND_PATH="src/connmand"
 
@@ -32,11 +33,14 @@ do_action_build() {
     # only build if daemon doesn't already exist (from cache)
     if [ ! -f "${CONNMAND_PATH}" ]; then
         ./bootstrap
-        ./configure
-        make
+        ./configure --with-dns-backend=systemd-resolved
+        make -j3
     fi
     sudo make install
     cd ..
+
+    sudo mkdir -p "${CONNMAN_SETTINGS_PATH}"
+    sudo cp ci/connman.settings "${CONNMAN_SETTINGS_PATH}/settings"
 
     # This may be done automatically if using `bootstrap-config`
     sudo cp connman/src/connman-dbus.conf /etc/dbus-1/system.d/
@@ -44,7 +48,7 @@ do_action_build() {
 }
 
 do_action_run() {
-    sudo connmand -d --nodnsproxy -i wlan0
+    sudo connmand -d --nodnsproxy --nodevice=wlan1 -c ci/connman.conf
 
     # Make sure wifi is enabled
     sudo connmanctl enable wifi

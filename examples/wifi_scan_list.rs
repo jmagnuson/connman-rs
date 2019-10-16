@@ -3,13 +3,16 @@ extern crate dbus;
 extern crate dbus_tokio;
 extern crate futures;
 
+use std::borrow::Cow;
 use std::rc::Rc;
+use std::time::Duration;
 
 use connman::api::Error as ConnmanError;
 use connman::{Manager, Technology};
 use dbus::{BusType, Connection};
 use dbus_tokio::AConnection;
 use futures::Future;
+use tokio::prelude::FutureExt;
 use tokio::reactor::Handle;
 use tokio::runtime::current_thread::Runtime;
 
@@ -36,9 +39,14 @@ fn main() {
 
     let wifi_scan = get_technology_wifi(&manager)
         // Initiate scan
-        .and_then(|wifi| wifi.unwrap().scan())
-        // List services once scan completes
-        .and_then(move |_| manager.clone().get_services())
+        .and_then(|wifi| wifi.unwrap().scan()
+            .timeout(Duration::from_secs(10))
+                .map_err(|e| {
+                    let s = format!("{:?}", e);
+                    ConnmanError::Timeout(Cow::Owned(s))
+                }))
+    // List services once scan completes
+    .and_then(move |_| manager.clone().get_services())
         .and_then(|services| {
             for svc in services {
                 // Dump service info

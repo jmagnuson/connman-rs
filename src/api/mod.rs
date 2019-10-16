@@ -24,6 +24,8 @@ pub enum Error {
     DbusError(#[cause] dbus::Error),
     #[fail(display = "'{}'", _0)]
     PropertyError(#[cause] PropertyError),
+    #[fail(display = "Failed resolve before timeout: '{}'", _0)]
+    Timeout(Cow<'static, str>)
 }
 
 #[derive(Debug, Fail)]
