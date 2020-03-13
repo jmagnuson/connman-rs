@@ -1,6 +1,5 @@
 use dbus::arg::{RefArg, Variant};
 use dbus::nonblock::{Proxy, SyncConnection};
-use futures::{future, Future, TryFutureExt};
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
@@ -9,6 +8,7 @@ use super::gen::manager::Manager as IManager;
 use super::service::{Properties as ServiceProperties, Service};
 use super::technology::Technology;
 use super::Error;
+use std::future::Future;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Duration;
@@ -34,28 +34,22 @@ impl Manager {
 }
 
 impl Manager {
-    pub fn get_technologies(&self) -> impl Future<Output = Result<Vec<Technology>, Error>> {
+    pub async fn get_technologies(&self) -> Result<Vec<Technology>, Error> {
         let connclone = self.proxy.connection.clone();
 
-        IManager::get_technologies(&self.proxy)
-            .map_err(Error::from)
-            .map_ok(move |v| {
-                v.into_iter()
-                    .filter_map(|(path, args)| Technology::new(connclone.clone(), path, args).ok())
-                    .collect()
-            })
+        let v = IManager::get_technologies(&self.proxy).await?;
+        Ok(v.into_iter()
+            .filter_map(|(path, args)| Technology::new(connclone.clone(), path, args).ok())
+            .collect())
     }
 
-    pub fn get_services(&self) -> impl Future<Output = Result<Vec<Service>, Error>> {
+    pub async fn get_services(&self) -> Result<Vec<Service>, Error> {
         let connclone = self.proxy.connection.clone();
 
-        IManager::get_services(&self.proxy)
-            .map_err(Error::from)
-            .map_ok(move |v| {
-                v.into_iter()
-                    .filter_map(|(path, args)| Service::new(connclone.clone(), path, args).ok())
-                    .collect()
-            })
+        let v = IManager::get_services(&self.proxy).await?;
+        Ok(v.into_iter()
+            .filter_map(|(path, args)| Service::new(connclone.clone(), path, args).ok())
+            .collect())
     }
 }
 
@@ -74,27 +68,21 @@ impl Manager {
             })
     }
 
-    pub fn get_state(&self) -> impl Future<Output = Result<State, Error>> {
-        IManager::get_properties(&self.proxy)
-            .map_err(Error::from)
-            .and_then(move |a| {
-                future::ready(
-                    super::get_property_fromstr::<State>(&a, "State").map_err(Error::from),
-                )
-            })
+    pub async fn get_state(&self) -> Result<State, Error> {
+        let a = IManager::get_properties(&self.proxy).await?;
+        Ok(super::get_property_fromstr::<State>(&a, "State")?)
     }
 
-    pub fn get_offline_mode(&self) -> impl Future<Output = Result<bool, Error>> {
-        IManager::get_properties(&self.proxy)
-            .map_err(Error::from)
-            .and_then(move |a| {
-                future::ready(super::get_property::<bool>(&a, "OfflineMode").map_err(Error::from))
-            })
+    pub async fn get_offline_mode(&self) -> Result<bool, Error> {
+        let a = IManager::get_properties(&self.proxy).await?;
+        Ok(super::get_property::<bool>(&a, "OfflineMode")?)
     }
 
-    pub fn set_offline_mode(&self, offline_mode: bool) -> impl Future<Output = Result<(), Error>> {
-        IManager::set_property(&self.proxy, "OfflineMode", Variant(Box::new(offline_mode)))
-            .map_err(Error::from)
+    pub async fn set_offline_mode(&self, offline_mode: bool) -> Result<(), Error> {
+        Ok(
+            IManager::set_property(&self.proxy, "OfflineMode", Variant(Box::new(offline_mode)))
+                .await?,
+        )
     }
 }
 

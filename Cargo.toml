@@ -36,7 +36,6 @@ introspection = ["xml-rs"]
 dbus = "0.8.1"
 dbus-tokio = "0.5.1"
 thiserror = "1.0.11"
-futures = "0.3.4"
 tokio = "0.2.13"
 xml-rs = { version = "0.3", optional = true }
 

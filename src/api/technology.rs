@@ -1,6 +1,5 @@
 use dbus::arg;
 use dbus::nonblock::{Proxy, SyncConnection};
-use futures::{future, Future, TryFutureExt};
 use std::rc::Rc;
 
 use std::collections::HashMap;
@@ -65,63 +64,51 @@ impl Technology {
             })
     }
 
-    pub fn scan(&self) -> impl Future<Output = Result<(), ApiError>> {
-        ITechnology::scan(&self.proxy).map_err(ApiError::from)
+    pub async fn scan(&self) -> Result<(), ApiError> {
+        Ok(ITechnology::scan(&self.proxy).await?)
     }
 }
 
 impl Technology {
-    pub fn set_powered(&self, powered: bool) -> impl Future<Output = Result<(), ApiError>> {
-        ITechnology::set_property(
+    pub async fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
+        Ok(ITechnology::set_property(
             &self.proxy,
             PropertyKind::Powered.into(),
             arg::Variant(Box::new(powered)),
         )
-        .map_err(|e| e.into())
+        .await?)
     }
 
-    pub fn get_powered(&self) -> impl Future<Output = Result<bool, ApiError>> {
-        ITechnology::get_properties(&self.proxy)
-            .map_err(ApiError::from)
-            .and_then(move |a| {
-                future::ready(
-                    super::get_property::<bool>(&a, PropertyKind::Powered.into())
-                        .map_err(ApiError::from),
-                )
-            })
+    pub async fn get_powered(&self) -> Result<bool, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property::<bool>(
+            &a,
+            PropertyKind::Powered.into(),
+        )?)
     }
 
-    pub fn get_connected(&self) -> impl Future<Output = Result<bool, ApiError>> {
-        ITechnology::get_properties(&self.proxy)
-            .map_err(ApiError::from)
-            .and_then(move |a| {
-                future::ready(
-                    super::get_property::<bool>(&a, PropertyKind::Connected.into())
-                        .map_err(ApiError::from),
-                )
-            })
+    pub async fn get_connected(&self) -> Result<bool, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property::<bool>(
+            &a,
+            PropertyKind::Connected.into(),
+        )?)
     }
 
-    pub fn get_name(&self) -> impl Future<Output = Result<String, ApiError>> {
-        ITechnology::get_properties(&self.proxy)
-            .map_err(ApiError::from)
-            .and_then(move |a| {
-                future::ready(
-                    super::get_property_fromstr::<String>(&a, PropertyKind::Name.into())
-                        .map_err(ApiError::from),
-                )
-            })
+    pub async fn get_name(&self) -> Result<String, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property_fromstr::<String>(
+            &a,
+            PropertyKind::Name.into(),
+        )?)
     }
 
-    pub fn get_type(&self) -> impl Future<Output = Result<Type, ApiError>> {
-        ITechnology::get_properties(&self.proxy)
-            .map_err(ApiError::from)
-            .and_then(move |a| {
-                future::ready(
-                    super::get_property_fromstr::<Type>(&a, PropertyKind::Type.into())
-                        .map_err(ApiError::from),
-                )
-            })
+    pub async fn get_type(&self) -> Result<Type, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property_fromstr::<Type>(
+            &a,
+            PropertyKind::Type.into(),
+        )?)
     }
 }
 

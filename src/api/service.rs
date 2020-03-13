@@ -1,6 +1,5 @@
 use dbus::arg;
 use dbus::nonblock::{Proxy as DBusProxy, SyncConnection};
-use futures::{Future, TryFutureExt};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -65,24 +64,24 @@ impl Service {
             })
     }
 
-    pub fn connect(&self) -> impl Future<Output = Result<(), ApiError>> {
-        IService::connect(&self.proxy).map_err(ApiError::from)
+    pub async fn connect(&self) -> Result<(), ApiError> {
+        Ok(IService::connect(&self.proxy).await?)
     }
 
-    pub fn disconnect(&self) -> impl Future<Output = Result<(), ApiError>> {
-        IService::disconnect(&self.proxy).map_err(ApiError::from)
+    pub async fn disconnect(&self) -> Result<(), ApiError> {
+        Ok(IService::disconnect(&self.proxy).await?)
     }
 
-    pub fn remove(&self) -> impl Future<Output = Result<(), ApiError>> {
-        IService::remove(&self.proxy).map_err(ApiError::from)
+    pub async fn remove(&self) -> Result<(), ApiError> {
+        Ok(IService::remove(&self.proxy).await?)
     }
 
-    pub fn move_before(&self, service: &Service) -> impl Future<Output = Result<(), ApiError>> {
-        IService::move_before(&self.proxy, service.path().clone()).map_err(ApiError::from)
+    pub async fn move_before(&self, service: &Service) -> Result<(), ApiError> {
+        Ok(IService::move_before(&self.proxy, service.path().clone()).await?)
     }
 
-    pub fn move_after(&self, service: &Service) -> impl Future<Output = Result<(), ApiError>> {
-        IService::move_after(&self.proxy, service.path().clone()).map_err(ApiError::from)
+    pub async fn move_after(&self, service: &Service) -> Result<(), ApiError> {
+        Ok(IService::move_after(&self.proxy, service.path().clone()).await?)
     }
 }
 
