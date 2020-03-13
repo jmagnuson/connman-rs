@@ -1,6 +1,6 @@
-use dbus::{arg, ConnPath};
-use dbus_tokio::AConnection;
-use futures::Future;
+use dbus::arg;
+use dbus::nonblock::{Proxy as DBusProxy, SyncConnection};
+use futures::{Future, TryFutureExt};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -12,53 +12,52 @@ use xml::reader::EventReader;
 use super::gen::service::Service as IService;
 use super::Error as ApiError;
 use super::{FromProperties, PropertyError};
-use crate::api::{RefArgMap, RefArgIter, get_property_argiter};
+use crate::api::{get_property_argiter, RefArgIter, RefArgMap};
+use dbus::arg::{cast, RefArg, Variant};
 use std::convert::TryFrom;
-use dbus::arg::{Variant, RefArg, cast};
+use std::time::Duration;
 
 /// Futures-aware wrapper struct for connman Service object.
-#[derive(Debug)]
 pub struct Service {
-    connpath: ConnPath<'static, Rc<AConnection>>,
+    proxy: DBusProxy<'static, Rc<SyncConnection>>,
     pub props: Properties,
 }
 
 impl Service {
     pub fn new(
-        connection: Rc<AConnection>,
+        connection: Rc<SyncConnection>,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
-        let properties = Properties::try_from(args)
-            .map_err(ApiError::from)?;
+        let properties = Properties::try_from(args).map_err(ApiError::from)?;
 
         Ok(Service {
-            connpath: Self::connpath(path, connection),
+            proxy: Self::proxy(path, connection),
             props: properties,
         })
     }
 
-    pub fn connpath(path: dbus::Path<'static>, conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
-        let connpath = ConnPath {
-            conn: conn,
-            dest: "net.connman".into(),
-            path,
-            timeout: 5000,
-        };
-        connpath
+    pub fn proxy(
+        path: dbus::Path<'static>,
+        conn: Rc<SyncConnection>,
+    ) -> DBusProxy<'static, Rc<SyncConnection>> {
+        let proxy = DBusProxy::new("net.connman", path, Duration::from_millis(5000), conn);
+        proxy
     }
 
     pub fn path(&self) -> &dbus::Path<'static> {
-        &self.connpath.path
+        &self.proxy.path
     }
 }
 
 impl Service {
     #[cfg(feature = "introspection")]
-    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=ApiError> {
+    pub fn introspect(
+        &self,
+    ) -> impl Future<Item = EventReader<std::io::Cursor<Vec<u8>>>, Error = ApiError> {
         use crate::api::gen::service::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.connpath)
+        Introspectable::introspect(&self.proxy)
             .map_err(ApiError::from)
             .map(|s| {
                 let rdr = std::io::Cursor::new(s.into_bytes());
@@ -66,24 +65,24 @@ impl Service {
             })
     }
 
-    pub fn connect(&self) -> impl Future<Item=(), Error=ApiError> {
-        IService::connect(&self.connpath).map_err(ApiError::from)
+    pub fn connect(&self) -> impl Future<Output = Result<(), ApiError>> {
+        IService::connect(&self.proxy).map_err(ApiError::from)
     }
 
-    pub fn disconnect(&self) -> impl Future<Item=(), Error=ApiError> {
-        IService::disconnect(&self.connpath).map_err(ApiError::from)
+    pub fn disconnect(&self) -> impl Future<Output = Result<(), ApiError>> {
+        IService::disconnect(&self.proxy).map_err(ApiError::from)
     }
 
-    pub fn remove(&self) -> impl Future<Item=(), Error=ApiError> {
-        IService::remove(&self.connpath).map_err(ApiError::from)
+    pub fn remove(&self) -> impl Future<Output = Result<(), ApiError>> {
+        IService::remove(&self.proxy).map_err(ApiError::from)
     }
 
-    pub fn move_before(&self, service: &Service) -> impl Future<Item=(), Error=ApiError> {
-        IService::move_before(&self.connpath, service.path().clone()).map_err(ApiError::from)
+    pub fn move_before(&self, service: &Service) -> impl Future<Output = Result<(), ApiError>> {
+        IService::move_before(&self.proxy, service.path().clone()).map_err(ApiError::from)
     }
 
-    pub fn move_after(&self, service: &Service) -> impl Future<Item=(), Error=ApiError> {
-        IService::move_after(&self.connpath, service.path().clone()).map_err(ApiError::from)
+    pub fn move_after(&self, service: &Service) -> impl Future<Output = Result<(), ApiError>> {
+        IService::move_after(&self.proxy, service.path().clone()).map_err(ApiError::from)
     }
 }
 
@@ -145,24 +144,36 @@ pub struct Properties {
 }
 
 impl FromProperties for State {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         super::get_property_fromstr::<Self>(properties, prop_name)
     }
 }
 
 impl FromProperties for Error {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         super::get_property_fromstr::<Self>(properties, prop_name)
     }
 }
 
 impl FromProperties for Type {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         super::get_property_fromstr::<Self>(properties, prop_name)
     }
 }
 impl FromProperties for Ipv4 {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         let mut i = get_property_argiter(properties, prop_name)?;
         let mut m: HashMap<String, String> = HashMap::new();
         while let Some(key) = i.next().and_then(|k| k.as_str()) {
@@ -173,7 +184,9 @@ impl FromProperties for Ipv4 {
 
         let method = if let Some(method) = m.get(Ipv4Kind::Method.into()) {
             Some(method.parse::<Ipv4Method>()?)
-        } else { None };
+        } else {
+            None
+        };
         let address = m.get(Ipv4Kind::Address.into()).cloned();
         let netmask = m.get(Ipv4Kind::Netmask.into()).cloned();
         let gateway = m.get(Ipv4Kind::Gateway.into()).cloned();
@@ -188,7 +201,10 @@ impl FromProperties for Ipv4 {
 }
 
 impl FromProperties for Ipv6 {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         let mut i = get_property_argiter(properties, prop_name)?;
         let mut m: HashMap<&str, &str> = HashMap::new();
         while let Some(key) = i.next().and_then(|k| k.as_str()) {
@@ -197,15 +213,18 @@ impl FromProperties for Ipv6 {
             }
         }
 
-        let method = m.get(Ipv6Kind::Method.into())
+        let method = m
+            .get(Ipv6Kind::Method.into())
             .and_then(|method| method.parse::<Ipv6Method>().ok());
 
         let address = m.get(Ipv6Kind::Address.into()).copied().map(String::from);
-        let prefix_length = m.get(Ipv6Kind::PrefixLength.into())
+        let prefix_length = m
+            .get(Ipv6Kind::PrefixLength.into())
             .and_then(|val| val.parse::<u8>().ok());
 
         let gateway = m.get(Ipv6Kind::Gateway.into()).copied().map(String::from);
-        let privacy = m.get(Ipv6Kind::Privacy.into())
+        let privacy = m
+            .get(Ipv6Kind::Privacy.into())
             .and_then(|privacy| privacy.parse::<Ipv6Privacy>().ok());
 
         Ok(Ipv6 {
@@ -219,7 +238,10 @@ impl FromProperties for Ipv6 {
 }
 
 impl FromProperties for Proxy {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         let mut i = get_property_argiter(properties, prop_name)?;
         let mut m: HashMap<&str, &dyn RefArg> = HashMap::new();
         while let Some(key) = i.next().and_then(|k| k.as_str()) {
@@ -228,18 +250,22 @@ impl FromProperties for Proxy {
             }
         }
 
-        let method = m.get(ProxyKind::Method.into())
+        let method = m
+            .get(ProxyKind::Method.into())
             .and_then(|refarg| refarg.as_str())
             .and_then(|s| ProxyMethod::from_str(s).ok());
 
-        let url = m.get(ProxyKind::Url.into())
+        let url = m
+            .get(ProxyKind::Url.into())
             .and_then(|refarg| refarg.as_str())
             .map(String::from);
 
-        let servers = m.get(ProxyKind::Servers.into())
+        let servers = m
+            .get(ProxyKind::Servers.into())
             .and_then(|refarg| cast::<Vec<String>>(&refarg.box_clone()).cloned());
 
-        let excludes = m.get(ProxyKind::Excludes.into())
+        let excludes = m
+            .get(ProxyKind::Excludes.into())
             .and_then(|refarg| cast::<Vec<String>>(&refarg.box_clone()).cloned());
 
         Ok(Proxy {
@@ -252,7 +278,10 @@ impl FromProperties for Proxy {
 }
 
 impl FromProperties for Provider {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         let mut i = get_property_argiter(properties, prop_name)?;
         let mut m: HashMap<&str, &str> = HashMap::new();
         while let Some(key) = i.next().and_then(|k| k.as_str()) {
@@ -262,7 +291,10 @@ impl FromProperties for Provider {
         }
 
         let host = m.get(ProviderKind::Host.into()).copied().map(String::from);
-        let domain = m.get(ProviderKind::Domain.into()).copied().map(String::from);
+        let domain = m
+            .get(ProviderKind::Domain.into())
+            .copied()
+            .map(String::from);
         let name = m.get(ProviderKind::Name.into()).copied().map(String::from);
         let type_ = m.get(ProviderKind::Type.into()).copied().map(String::from);
 
@@ -276,7 +308,10 @@ impl FromProperties for Provider {
 }
 
 impl FromProperties for Ethernet {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         let mut i = get_property_argiter(properties, prop_name)?;
         let mut eth = Ethernet {
             method: None,
@@ -288,29 +323,28 @@ impl FromProperties for Ethernet {
             let kind = EthernetKind::from_str(key).expect("Unhandled EthernetKind variant");
             match kind {
                 EthernetKind::Method => {
-                    if let Some(method) = i.next()
+                    if let Some(method) = i
+                        .next()
                         .and_then(|v| v.as_str())
-                        .and_then(|v| EthernetMethod::from_str(v).ok()) {
-                            eth.method = Some(method);
-                        };
+                        .and_then(|v| EthernetMethod::from_str(v).ok())
+                    {
+                        eth.method = Some(method);
+                    };
                 }
                 EthernetKind::Interface => {
-                    if let Some(iface) = i.next()
-                        .and_then(|v| v.as_str()) {
-                            eth.interface = Some(iface.to_string());
-                        };
+                    if let Some(iface) = i.next().and_then(|v| v.as_str()) {
+                        eth.interface = Some(iface.to_string());
+                    };
                 }
                 EthernetKind::Address => {
-                    if let Some(addr) = i.next()
-                        .and_then(|v| v.as_str()) {
-                            eth.address = Some(addr.to_string());
-                        };
+                    if let Some(addr) = i.next().and_then(|v| v.as_str()) {
+                        eth.address = Some(addr.to_string());
+                    };
                 }
                 EthernetKind::Mtu => {
-                    if let Some(mtu) = i.next()
-                        .and_then(|v| v.as_u64()) {
-                            eth.mtu = Some(mtu as u16);
-                        };
+                    if let Some(mtu) = i.next().and_then(|v| v.as_u64()) {
+                        eth.mtu = Some(mtu as u16);
+                    };
                 }
             }
         }
@@ -322,28 +356,40 @@ impl Properties {
     pub fn try_from(props: RefArgMap) -> Result<Self, PropertyError> {
         let state = State::from_properties(&props, PropertyKind::State.into())?;
 
-        let error: Option<Error> = FromProperties::from_properties(&props, PropertyKind::Error.into())?;
+        let error: Option<Error> =
+            FromProperties::from_properties(&props, PropertyKind::Error.into())?;
 
-        let name: Option<String> = FromProperties::from_properties(&props, PropertyKind::Name.into())?;
+        let name: Option<String> =
+            FromProperties::from_properties(&props, PropertyKind::Name.into())?;
 
-        let type_: Option<Type> = FromProperties::from_properties(&props, PropertyKind::Type.into())?;
+        let type_: Option<Type> =
+            FromProperties::from_properties(&props, PropertyKind::Type.into())?;
 
-        let security: Option<Vec<String>> = FromProperties::from_properties(&props, PropertyKind::Security.into())?;
+        let security: Option<Vec<String>> =
+            FromProperties::from_properties(&props, PropertyKind::Security.into())?;
 
-        let strength: Option<u8> = FromProperties::from_properties(&props, PropertyKind::Strength.into())?;
+        let strength: Option<u8> =
+            FromProperties::from_properties(&props, PropertyKind::Strength.into())?;
 
         let favorite = bool::from_properties(&props, PropertyKind::Favorite.into())?;
         let immutable = bool::from_properties(&props, PropertyKind::Immutable.into())?;
         let autoconnect = bool::from_properties(&props, PropertyKind::AutoConnect.into())?;
 
-        let roaming: Option<bool> = FromProperties::from_properties(&props, PropertyKind::Roaming.into())?;
+        let roaming: Option<bool> =
+            FromProperties::from_properties(&props, PropertyKind::Roaming.into())?;
 
-        let nameservers: Vec<String> = FromProperties::from_properties(&props, PropertyKind::Nameservers.into())?;
-        let nameservers_config: Vec<String> = FromProperties::from_properties(&props, PropertyKind::NameserversConfiguration.into())?;
-        let timeservers: Vec<String> = FromProperties::from_properties(&props, PropertyKind::Timeservers.into())?;
-        let timeservers_config: Vec<String> = FromProperties::from_properties(&props, PropertyKind::TimeserversConfiguration.into())?;
-        let domains: Vec<String> = FromProperties::from_properties(&props, PropertyKind::Domains.into())?;
-        let domains_config: Vec<String> = FromProperties::from_properties(&props, PropertyKind::DomainsConfiguration.into())?;
+        let nameservers: Vec<String> =
+            FromProperties::from_properties(&props, PropertyKind::Nameservers.into())?;
+        let nameservers_config: Vec<String> =
+            FromProperties::from_properties(&props, PropertyKind::NameserversConfiguration.into())?;
+        let timeservers: Vec<String> =
+            FromProperties::from_properties(&props, PropertyKind::Timeservers.into())?;
+        let timeservers_config: Vec<String> =
+            FromProperties::from_properties(&props, PropertyKind::TimeserversConfiguration.into())?;
+        let domains: Vec<String> =
+            FromProperties::from_properties(&props, PropertyKind::Domains.into())?;
+        let domains_config: Vec<String> =
+            FromProperties::from_properties(&props, PropertyKind::DomainsConfiguration.into())?;
 
         let ipv4 = Ipv4::from_properties(&props, PropertyKind::Ipv4.into())?;
         let ipv4_config = Ipv4::from_properties(&props, PropertyKind::Ipv4Configuration.into())?;
@@ -357,8 +403,10 @@ impl Properties {
 
         let ethernet = Ethernet::from_properties(&props, PropertyKind::Ethernet.into())?;
 
-        let mdns: Option<bool> = FromProperties::from_properties(&props, PropertyKind::Mdns.into())?;
-        let mdns_config: Option<bool> = FromProperties::from_properties(&props, PropertyKind::MdnsConfiguration.into())?;
+        let mdns: Option<bool> =
+            FromProperties::from_properties(&props, PropertyKind::Mdns.into())?;
+        let mdns_config: Option<bool> =
+            FromProperties::from_properties(&props, PropertyKind::MdnsConfiguration.into())?;
 
         Ok(Properties {
             state,
@@ -386,7 +434,7 @@ impl Properties {
             provider,
             ethernet,
             mdns,
-            mdns_config
+            mdns_config,
         })
     }
 }
