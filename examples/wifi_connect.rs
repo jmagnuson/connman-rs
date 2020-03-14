@@ -1,24 +1,18 @@
 extern crate connman;
 extern crate dbus;
 extern crate dbus_tokio;
-extern crate futures;
 extern crate hex;
 extern crate structopt;
 
 use std::borrow::Cow;
 use std::io;
-use std::rc::Rc;
+use std::time::Duration;
 
 use connman::api::Error as ConnmanError;
 use connman::{Manager, Technology};
-use dbus::{BusType, Connection};
-use dbus_tokio::AConnection;
-use futures::{future::Either, Future, IntoFuture};
-use std::time::Duration;
+use dbus_tokio::connection;
 use structopt::StructOpt;
-use tokio::prelude::FutureExt;
-use tokio::reactor::Handle;
-use tokio::runtime::current_thread::Runtime;
+use tokio::time::timeout;
 
 // TODO: Is there a way to determine this path from connman?
 const WIFI_SERVICE_CONFIG_FILE: &str = "/usr/local/var/lib/connman/wifi.config";
@@ -39,11 +33,10 @@ struct WifiConnectOpts {
     ssid: String,
 }
 
-pub fn get_technology_wifi(
-    manager: &Manager,
-) -> impl Future<Item = Option<Technology>, Error = ConnmanError> {
+pub async fn get_technology_wifi(manager: &Manager) -> Result<Option<Technology>, ConnmanError> {
     manager
         .get_technologies()
+        .await
         // Filter out the wifi technology (eventually this will be a simple library call)
         .map(|v| {
             v.into_iter()
@@ -94,7 +87,8 @@ pub fn write_wifi_service_config(s: &str) -> Result<(), io::Error> {
     file.write_all(s.as_bytes())
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = WifiConnectOpts::from_args();
 
     if !args.disconnect {
@@ -110,79 +104,72 @@ fn main() {
 
     let hex_ssid = hex::encode(&args.ssid);
 
-    let mut runtime = Runtime::new().unwrap();
+    let (resource, conn) = connection::new_system_sync().unwrap();
+    tokio::spawn(async {
+        let err = resource.await;
+        panic!("Lost connection to D-Bus: {}", err);
+    });
 
-    let conn = Rc::new(Connection::get_private(BusType::System).unwrap());
-    let aconn = Rc::new(AConnection::new(conn.clone(), Handle::default(), &mut runtime).unwrap());
+    let manager = Manager::new(conn);
 
-    let manager = Manager::new(aconn);
+    let wifi = get_technology_wifi(&manager).await.unwrap();
 
-    let wifi_scan = get_technology_wifi(&manager)
-        // Initiate scan
-        .and_then(|wifi| wifi.unwrap().scan()
-            .timeout(Duration::from_secs(10))
-            .map_err(|e| {
-                let s = format!("{:?}", e);
-                ConnmanError::Timeout(Cow::Owned(s))
-            }))
-            // List services once scan completes
-        .and_then(|_| manager.clone().get_services())
-        .and_then(|services| {
-            for svc in services {
-                //wifi_ffffffffffff_00112233aabbccdd_managed_psk
-                //tech_mac.addr...._hex.ssid........_security...
-                let pathv = svc
-                    .path()
-                    .as_cstr()
-                    .to_str()
-                    .unwrap()
-                    .split("_")
-                    .collect::<Vec<&str>>();
-                let svc_hex_ssid = *pathv.get(2).unwrap();
-                if svc_hex_ssid == hex_ssid {
-                    println!("Found service: {:?}", svc);
-                    return Ok(Some(svc));
-                } else {
-                    let svc_ssid_str = hex::decode(&svc_hex_ssid)
-                        .map(|s| String::from_utf8(s).expect("Failed to turn ssid into string"));
-                    if let Ok(ssid) = svc_ssid_str {
-                        println!("{} != {}", ssid, args.ssid);
-                    } else {
-                        println!("Failed to decode hex string: {}", svc_hex_ssid);
-                    }
-                }
-            }
-            Ok(None)
+    // Initiate scan
+    timeout(Duration::from_secs(10), wifi.unwrap().scan())
+        .await
+        .map_err(|e| {
+            let s = format!("{:?}", e);
+            ConnmanError::Timeout(Cow::Owned(s))
         })
-        .and_then(|maybe_svc| {
-            if let Some(svc) = maybe_svc {
-                let f = if args.disconnect {
-                    println!("Disconnecting service: {:?}", svc.path());
-                    Either::A(svc.disconnect())
-                } else {
-                    println!("Connecting to service: {:?}", svc.path());
-                    Either::B(svc.connect())
-                };
-                Either::A(
-                    f.timeout(Duration::from_secs(10))
-                        .map_err(|e| {
-                            let s = format!("{:?}", e);
-                            ConnmanError::Timeout(Cow::Owned(s))
-                        })
-                        .map(|_| Some(svc)),
-                )
+        .unwrap()
+        .unwrap();
+
+    // List services once scan completes
+    let services = manager.clone().get_services().await.unwrap();
+    let maybe_svc = services.iter().find(|svc| {
+        //wifi_ffffffffffff_00112233aabbccdd_managed_psk
+        //tech_mac.addr...._hex.ssid........_security...
+        let pathv = svc
+            .path()
+            .as_cstr()
+            .to_str()
+            .unwrap()
+            .split("_")
+            .collect::<Vec<&str>>();
+        let svc_hex_ssid = *pathv.get(2).unwrap();
+        let found = svc_hex_ssid == hex_ssid;
+        if found {
+            println!("Found service: {:?}", svc.path());
+        } else {
+            let svc_ssid_str = hex::decode(&svc_hex_ssid)
+                .map(|s| String::from_utf8(s).expect("Failed to turn ssid into string"));
+            if let Ok(ssid) = svc_ssid_str {
+                println!("{} != {}", ssid, args.ssid);
             } else {
-                Either::B(Ok(maybe_svc).into_future())
+                println!("Failed to decode hex string: {}", svc_hex_ssid);
             }
+        }
+        found
+    });
+
+    if let Some(svc) = maybe_svc {
+        if args.disconnect {
+            println!("Disconnecting service: {:?}", svc.path());
+            timeout(Duration::from_secs(10), svc.disconnect()).await
+        } else {
+            println!("Connecting to service: {:?}", svc.path());
+            timeout(Duration::from_secs(10), svc.connect()).await
+        }
+        .map_err(|e| {
+            let s = format!("{:?}", e);
+            ConnmanError::Timeout(Cow::Owned(s))
         })
-        .and_then(|maybe_svc| {
-            manager.clone().get_state().map(|state| {
-                println!("Connection state: {:?}", state);
-                maybe_svc
-            })
-        });
+        .unwrap()
+        .unwrap();
+    };
 
-    let res = runtime.block_on(wifi_scan).unwrap();
+    let state = manager.clone().get_state().await.unwrap();
+    println!("Connection state: {:?}", state);
 
-    println!("exit: {:?}", res);
+    println!("exit: {:?}", maybe_svc.map(|svc| svc.path()));
 }
