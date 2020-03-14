@@ -55,17 +55,12 @@ impl Manager {
 
 impl Manager {
     #[cfg(feature = "introspection")]
-    pub fn introspect(
-        &self,
-    ) -> impl Future<Item = EventReader<std::io::Cursor<Vec<u8>>>, Error = Error> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, Error> {
         use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.proxy)
-            .map_err(Error::from)
-            .map(|s| {
-                let rdr = std::io::Cursor::new(s.into_bytes());
-                EventReader::new(rdr)
-            })
+        let s = Introspectable::introspect(&self.proxy).await?;
+        let rdr = std::io::Cursor::new(s.into_bytes());
+        Ok(EventReader::new(rdr))
     }
 
     pub async fn get_state(&self) -> Result<State, Error> {

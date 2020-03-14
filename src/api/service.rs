@@ -51,17 +51,12 @@ impl Service {
 
 impl Service {
     #[cfg(feature = "introspection")]
-    pub fn introspect(
-        &self,
-    ) -> impl Future<Item = EventReader<std::io::Cursor<Vec<u8>>>, Error = ApiError> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::service::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.proxy)
-            .map_err(ApiError::from)
-            .map(|s| {
-                let rdr = std::io::Cursor::new(s.into_bytes());
-                EventReader::new(rdr)
-            })
+        let s = Introspectable::introspect(&self.proxy).await?;
+        let rdr = std::io::Cursor::new(s.into_bytes());
+        Ok(EventReader::new(rdr))
     }
 
     pub async fn connect(&self) -> Result<(), ApiError> {
