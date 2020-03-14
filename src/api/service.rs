@@ -2,8 +2,8 @@ use dbus::arg;
 use dbus::nonblock::{Proxy as DBusProxy, SyncConnection};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
@@ -18,13 +18,13 @@ use std::time::Duration;
 
 /// Futures-aware wrapper struct for connman Service object.
 pub struct Service {
-    proxy: DBusProxy<'static, Rc<SyncConnection>>,
+    proxy: DBusProxy<'static, Arc<SyncConnection>>,
     pub props: Properties,
 }
 
 impl Service {
     pub fn new(
-        connection: Rc<SyncConnection>,
+        connection: Arc<SyncConnection>,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
@@ -38,8 +38,8 @@ impl Service {
 
     pub fn proxy(
         path: dbus::Path<'static>,
-        conn: Rc<SyncConnection>,
-    ) -> DBusProxy<'static, Rc<SyncConnection>> {
+        conn: Arc<SyncConnection>,
+    ) -> DBusProxy<'static, Arc<SyncConnection>> {
         let proxy = DBusProxy::new("net.connman", path, Duration::from_millis(5000), conn);
         proxy
     }

@@ -1,6 +1,6 @@
 use dbus::arg;
 use dbus::nonblock::{Proxy, SyncConnection};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use std::collections::HashMap;
 
@@ -18,13 +18,13 @@ use xml::reader::EventReader;
 /// Futures-aware wrapper struct for connman Technology object.
 #[derive(Clone)]
 pub struct Technology {
-    proxy: Proxy<'static, Rc<SyncConnection>>,
+    proxy: Proxy<'static, Arc<SyncConnection>>,
     pub props: Properties,
 }
 
 impl Technology {
     pub fn new(
-        connection: Rc<SyncConnection>,
+        connection: Arc<SyncConnection>,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
@@ -38,8 +38,8 @@ impl Technology {
 
     pub fn proxy(
         path: dbus::Path<'static>,
-        conn: Rc<SyncConnection>,
-    ) -> Proxy<'static, Rc<SyncConnection>> {
+        conn: Arc<SyncConnection>,
+    ) -> Proxy<'static, Arc<SyncConnection>> {
         let proxy = Proxy::new("net.connman", path, Duration::from_millis(5000), conn);
         proxy
     }

@@ -9,25 +9,25 @@ use super::service::{Properties as ServiceProperties, Service};
 use super::technology::Technology;
 use super::Error;
 use std::future::Future;
-use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Futures-aware wrapper struct for connman Manager object.
 #[derive(Clone)]
 pub struct Manager {
-    proxy: Proxy<'static, Rc<SyncConnection>>,
+    proxy: Proxy<'static, Arc<SyncConnection>>,
     // TODO: Signal subscription/dispatcher
 }
 
 impl Manager {
-    pub fn new(connection: Rc<SyncConnection>) -> Self {
+    pub fn new(connection: Arc<SyncConnection>) -> Self {
         Manager {
             proxy: Self::proxy(connection),
         }
     }
 
-    pub fn proxy(conn: Rc<SyncConnection>) -> Proxy<'static, Rc<SyncConnection>> {
+    pub fn proxy(conn: Arc<SyncConnection>) -> Proxy<'static, Arc<SyncConnection>> {
         let proxy = Proxy::new("net.connman", "/", Duration::from_millis(5000), conn);
         proxy
     }
