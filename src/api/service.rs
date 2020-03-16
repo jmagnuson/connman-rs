@@ -1,9 +1,8 @@
 use dbus::arg;
-use dbus::nonblock::{Proxy as DBusProxy, SyncConnection};
+use dbus::nonblock::{NonblockReply, Proxy as DBusProxy, SyncConnection};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
@@ -14,17 +13,18 @@ use super::{FromProperties, PropertyError};
 use crate::api::{get_property_argiter, RefArgIter, RefArgMap};
 use dbus::arg::{cast, RefArg, Variant};
 use std::convert::TryFrom;
+use std::ops::Deref;
 use std::time::Duration;
 
 /// Futures-aware wrapper struct for connman Service object.
-pub struct Service {
-    proxy: DBusProxy<'static, Arc<SyncConnection>>,
+pub struct Service<C> {
+    proxy: DBusProxy<'static, C>,
     pub props: Properties,
 }
 
-impl Service {
+impl<C> Service<C> {
     pub fn new(
-        connection: Arc<SyncConnection>,
+        connection: C,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
@@ -36,10 +36,7 @@ impl Service {
         })
     }
 
-    pub fn proxy(
-        path: dbus::Path<'static>,
-        conn: Arc<SyncConnection>,
-    ) -> DBusProxy<'static, Arc<SyncConnection>> {
+    pub fn proxy(path: dbus::Path<'static>, conn: C) -> DBusProxy<'static, C> {
         let proxy = DBusProxy::new("net.connman", path, Duration::from_millis(5000), conn);
         proxy
     }
@@ -49,7 +46,7 @@ impl Service {
     }
 }
 
-impl Service {
+impl<T: NonblockReply, C: Deref<Target = T>> Service<C> {
     #[cfg(feature = "introspection")]
     pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::service::OrgFreedesktopDBusIntrospectable as Introspectable;
@@ -71,11 +68,11 @@ impl Service {
         Ok(IService::remove(&self.proxy).await?)
     }
 
-    pub async fn move_before(&self, service: &Service) -> Result<(), ApiError> {
+    pub async fn move_before(&self, service: &Service<C>) -> Result<(), ApiError> {
         Ok(IService::move_before(&self.proxy, service.path().clone()).await?)
     }
 
-    pub async fn move_after(&self, service: &Service) -> Result<(), ApiError> {
+    pub async fn move_after(&self, service: &Service<C>) -> Result<(), ApiError> {
         Ok(IService::move_after(&self.proxy, service.path().clone()).await?)
     }
 }

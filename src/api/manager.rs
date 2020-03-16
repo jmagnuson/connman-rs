@@ -1,5 +1,5 @@
 use dbus::arg::{RefArg, Variant};
-use dbus::nonblock::{Proxy, SyncConnection};
+use dbus::nonblock::{NonblockReply, Proxy, SyncConnection};
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
@@ -9,32 +9,32 @@ use super::service::{Properties as ServiceProperties, Service};
 use super::technology::Technology;
 use super::Error;
 use std::future::Future;
+use std::ops::Deref;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Futures-aware wrapper struct for connman Manager object.
 #[derive(Clone)]
-pub struct Manager {
-    proxy: Proxy<'static, Arc<SyncConnection>>,
+pub struct Manager<C> {
+    proxy: Proxy<'static, C>,
     // TODO: Signal subscription/dispatcher
 }
 
-impl Manager {
-    pub fn new(connection: Arc<SyncConnection>) -> Self {
+impl<C> Manager<C> {
+    pub fn new(connection: C) -> Self {
         Manager {
             proxy: Self::proxy(connection),
         }
     }
 
-    pub fn proxy(conn: Arc<SyncConnection>) -> Proxy<'static, Arc<SyncConnection>> {
+    pub fn proxy(conn: C) -> Proxy<'static, C> {
         let proxy = Proxy::new("net.connman", "/", Duration::from_millis(5000), conn);
         proxy
     }
 }
 
-impl Manager {
-    pub async fn get_technologies(&self) -> Result<Vec<Technology>, Error> {
+impl<T: NonblockReply, C: Deref<Target = T> + Clone> Manager<C> {
+    pub async fn get_technologies(&self) -> Result<Vec<Technology<C>>, Error> {
         let connclone = self.proxy.connection.clone();
 
         let v = IManager::get_technologies(&self.proxy).await?;
@@ -43,7 +43,7 @@ impl Manager {
             .collect())
     }
 
-    pub async fn get_services(&self) -> Result<Vec<Service>, Error> {
+    pub async fn get_services(&self) -> Result<Vec<Service<C>>, Error> {
         let connclone = self.proxy.connection.clone();
 
         let v = IManager::get_services(&self.proxy).await?;
@@ -53,7 +53,7 @@ impl Manager {
     }
 }
 
-impl Manager {
+impl<T: NonblockReply, C: Deref<Target = T>> Manager<C> {
     #[cfg(feature = "introspection")]
     pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, Error> {
         use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;

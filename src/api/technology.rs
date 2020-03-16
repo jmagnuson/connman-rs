@@ -1,5 +1,5 @@
 use dbus::arg;
-use dbus::nonblock::{Proxy, SyncConnection};
+use dbus::nonblock::{NonblockReply, Proxy, SyncConnection};
 use std::sync::Arc;
 
 use std::collections::HashMap;
@@ -9,6 +9,7 @@ use super::{Error as ApiError, RefArgMap};
 use crate::api::{FromProperties, PropertyError};
 use std::borrow::Cow;
 use std::convert::TryFrom;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -17,14 +18,14 @@ use xml::reader::EventReader;
 
 /// Futures-aware wrapper struct for connman Technology object.
 #[derive(Clone)]
-pub struct Technology {
-    proxy: Proxy<'static, Arc<SyncConnection>>,
+pub struct Technology<C> {
+    proxy: Proxy<'static, C>,
     pub props: Properties,
 }
 
-impl Technology {
+impl<C> Technology<C> {
     pub fn new(
-        connection: Arc<SyncConnection>,
+        connection: C,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
@@ -36,10 +37,7 @@ impl Technology {
             })
     }
 
-    pub fn proxy(
-        path: dbus::Path<'static>,
-        conn: Arc<SyncConnection>,
-    ) -> Proxy<'static, Arc<SyncConnection>> {
+    pub fn proxy(path: dbus::Path<'static>, conn: C) -> Proxy<'static, C> {
         let proxy = Proxy::new("net.connman", path, Duration::from_millis(5000), conn);
         proxy
     }
@@ -49,7 +47,7 @@ impl Technology {
     }
 }
 
-impl Technology {
+impl<T: NonblockReply, C: Deref<Target = T>> Technology<C> {
     #[cfg(feature = "introspection")]
     pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::technology::OrgFreedesktopDBusIntrospectable as Introspectable;
@@ -64,7 +62,7 @@ impl Technology {
     }
 }
 
-impl Technology {
+impl<T: NonblockReply, C: Deref<Target = T>> Technology<C> {
     pub async fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
         Ok(ITechnology::set_property(
             &self.proxy,

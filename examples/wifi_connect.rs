@@ -1,9 +1,11 @@
 use std::borrow::Cow;
 use std::io;
+use std::ops::Deref;
 use std::time::Duration;
 
 use connman::api::Error as ConnmanError;
 use connman::{Manager, Technology};
+use dbus::nonblock::NonblockReply;
 use dbus_tokio::connection;
 use structopt::StructOpt;
 use tokio::time::timeout;
@@ -27,7 +29,9 @@ struct WifiConnectOpts {
     ssid: String,
 }
 
-pub async fn get_technology_wifi(manager: &Manager) -> Result<Option<Technology>, ConnmanError> {
+pub async fn get_technology_wifi<T: NonblockReply, C: Deref<Target = T> + Clone>(
+    manager: &Manager<C>,
+) -> Result<Option<Technology<C>>, ConnmanError> {
     manager
         .get_technologies()
         .await

@@ -1,10 +1,15 @@
 use connman::api::technology::Type as TechnologyType;
 use connman::api::Error as ConnmanError;
 use connman::{Manager, Technology};
+use dbus::nonblock::NonblockReply;
 use dbus_tokio::connection;
 use xml::reader::XmlEvent;
 
-pub async fn get_technology_wifi(manager: &Manager) -> Result<Option<Technology>, ConnmanError> {
+use std::ops::Deref;
+
+pub async fn get_technology_wifi<T: NonblockReply, C: Deref<Target = T> + Clone>(
+    manager: &Manager<C>,
+) -> Result<Option<Technology<C>>, ConnmanError> {
     manager.get_technologies().await.map(|v| {
         v.into_iter()
             .find(move |t| t.props.type_ == TechnologyType::Wifi)
