@@ -1,7 +1,3 @@
-extern crate connman;
-extern crate dbus;
-extern crate dbus_tokio;
-
 use std::borrow::Cow;
 use std::time::Duration;
 

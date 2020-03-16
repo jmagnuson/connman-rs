@@ -1,9 +1,3 @@
-extern crate connman;
-extern crate dbus;
-extern crate dbus_tokio;
-extern crate hex;
-extern crate structopt;
-
 use std::borrow::Cow;
 use std::io;
 use std::time::Duration;

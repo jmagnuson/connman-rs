@@ -1,7 +1,3 @@
-extern crate connman;
-extern crate dbus;
-extern crate dbus_tokio;
-
 use connman::api::technology::Type as TechnologyType;
 use connman::api::Error as ConnmanError;
 use connman::{Manager, Technology};
