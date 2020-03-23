@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::io;
 use std::ops::Deref;
 use std::time::Duration;
@@ -8,7 +7,6 @@ use connman::{Manager, Technology};
 use dbus::nonblock::NonblockReply;
 use dbus_tokio::connection;
 use structopt::StructOpt;
-use tokio::time::timeout;
 
 // TODO: Is there a way to determine this path from connman?
 const WIFI_SERVICE_CONFIG_FILE: &str = "/usr/local/var/lib/connman/wifi.config";
@@ -108,19 +106,12 @@ async fn main() {
         panic!("Lost connection to D-Bus: {}", err);
     });
 
-    let manager = Manager::new(conn);
+    let manager = Manager::new(conn, Duration::from_secs(10));
 
     let wifi = get_technology_wifi(&manager).await.unwrap();
 
     // Initiate scan
-    timeout(Duration::from_secs(10), wifi.unwrap().scan())
-        .await
-        .map_err(|e| {
-            let s = format!("{:?}", e);
-            ConnmanError::Timeout(Cow::Owned(s))
-        })
-        .unwrap()
-        .unwrap();
+    wifi.unwrap().scan().await.unwrap();
 
     // List services once scan completes
     let services = manager.clone().get_services().await.unwrap();
@@ -153,16 +144,11 @@ async fn main() {
     if let Some(svc) = maybe_svc {
         if args.disconnect {
             println!("Disconnecting service: {:?}", svc.path());
-            timeout(Duration::from_secs(10), svc.disconnect()).await
+            svc.disconnect().await
         } else {
             println!("Connecting to service: {:?}", svc.path());
-            timeout(Duration::from_secs(10), svc.connect()).await
+            svc.connect().await
         }
-        .map_err(|e| {
-            let s = format!("{:?}", e);
-            ConnmanError::Timeout(Cow::Owned(s))
-        })
-        .unwrap()
         .unwrap();
     };
 

@@ -6,6 +6,7 @@ use dbus_tokio::connection;
 use xml::reader::XmlEvent;
 
 use std::ops::Deref;
+use std::time::Duration;
 
 pub async fn get_technology_wifi<T: NonblockReply, C: Deref<Target = T> + Clone>(
     manager: &Manager<C>,
@@ -33,7 +34,7 @@ async fn main() {
         panic!("Lost connection to D-Bus: {}", err);
     });
 
-    let manager = Manager::new(conn);
+    let manager = Manager::new(conn, Duration::from_secs(5));
 
     let wifi = get_technology_wifi(&manager).await.unwrap();
     let event_reader = wifi.unwrap().introspect().await.unwrap();

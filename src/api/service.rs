@@ -27,17 +27,18 @@ impl<C> Service<C> {
         connection: C,
         path: dbus::Path<'static>,
         args: RefArgMap,
+        timeout: Duration,
     ) -> Result<Self, ApiError> {
         let properties = Properties::try_from(args).map_err(ApiError::from)?;
 
         Ok(Service {
-            proxy: Self::proxy(path, connection),
+            proxy: Self::proxy(path, timeout, connection),
             props: properties,
         })
     }
 
-    pub fn proxy(path: dbus::Path<'static>, conn: C) -> DBusProxy<'static, C> {
-        let proxy = DBusProxy::new("net.connman", path, Duration::from_millis(5000), conn);
+    pub fn proxy(path: dbus::Path<'static>, timeout: Duration, conn: C) -> DBusProxy<'static, C> {
+        let proxy = DBusProxy::new("net.connman", path, timeout, conn);
         proxy
     }
 

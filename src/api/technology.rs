@@ -28,17 +28,18 @@ impl<C> Technology<C> {
         connection: C,
         path: dbus::Path<'static>,
         args: RefArgMap,
+        timeout: Duration,
     ) -> Result<Self, ApiError> {
         Properties::try_from(args)
             .map_err(ApiError::from)
             .map(|props| Technology {
-                proxy: Self::proxy(path, connection),
+                proxy: Self::proxy(path, timeout, connection),
                 props,
             })
     }
 
-    pub fn proxy(path: dbus::Path<'static>, conn: C) -> Proxy<'static, C> {
-        let proxy = Proxy::new("net.connman", path, Duration::from_millis(5000), conn);
+    pub fn proxy(path: dbus::Path<'static>, timeout: Duration, conn: C) -> Proxy<'static, C> {
+        let proxy = Proxy::new("net.connman", path, timeout, conn);
         proxy
     }
 

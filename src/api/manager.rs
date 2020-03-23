@@ -17,18 +17,20 @@ use std::time::Duration;
 #[derive(Clone)]
 pub struct Manager<C> {
     proxy: Proxy<'static, C>,
+    timeout: Duration,
     // TODO: Signal subscription/dispatcher
 }
 
 impl<C> Manager<C> {
-    pub fn new(connection: C) -> Self {
+    pub fn new(connection: C, timeout: Duration) -> Self {
         Manager {
-            proxy: Self::proxy(connection),
+            proxy: Self::proxy(timeout, connection),
+            timeout,
         }
     }
 
-    pub fn proxy(conn: C) -> Proxy<'static, C> {
-        let proxy = Proxy::new("net.connman", "/", Duration::from_millis(5000), conn);
+    pub fn proxy(timeout: Duration, conn: C) -> Proxy<'static, C> {
+        let proxy = Proxy::new("net.connman", "/", timeout, conn);
         proxy
     }
 }
@@ -39,7 +41,9 @@ impl<T: NonblockReply, C: Deref<Target = T> + Clone> Manager<C> {
 
         let v = IManager::get_technologies(&self.proxy).await?;
         Ok(v.into_iter()
-            .filter_map(|(path, args)| Technology::new(connclone.clone(), path, args).ok())
+            .filter_map(|(path, args)| {
+                Technology::new(connclone.clone(), path, args, self.timeout).ok()
+            })
             .collect())
     }
 
@@ -48,7 +52,9 @@ impl<T: NonblockReply, C: Deref<Target = T> + Clone> Manager<C> {
 
         let v = IManager::get_services(&self.proxy).await?;
         Ok(v.into_iter()
-            .filter_map(|(path, args)| Service::new(connclone.clone(), path, args).ok())
+            .filter_map(|(path, args)| {
+                Service::new(connclone.clone(), path, args, self.timeout).ok()
+            })
             .collect())
     }
 }
