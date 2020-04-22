@@ -33,11 +33,11 @@ default = []
 introspection = ["xml-rs"]
 
 [dependencies]
-dbus = "0.6"
-dbus-tokio = "0.3"
+dbus = { version = "0.8", features = ["futures"] }
+dbus-tokio = "0.5"
 failure = "0.1"
-futures = "0.1"
-tokio = "0.1"
+futures = "0.3"
+tokio = { version = "0.2", features=["time", "macros", "io-driver", "rt-core", "rt-util", "rt-threaded", "stream"] }
 xml-rs = { version = "0.3", optional = true }
 
 [dev-dependencies]
