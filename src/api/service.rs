@@ -1,8 +1,13 @@
-use dbus::{arg, ConnPath};
+use dbus::{arg};
+use dbus::nonblock::Proxy as ConnPath;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
+use futures::TryFutureExt;
+use std::sync::Arc;
+use std::time::Duration;
+use std::fmt;
 
 type AConnection = Arc<dbus::nonblock::SyncConnection>;
 
@@ -17,10 +22,18 @@ use std::convert::TryFrom;
 use dbus::arg::{Variant, RefArg, cast};
 
 /// Futures-aware wrapper struct for connman Service object.
-#[derive(Debug)]
 pub struct Service {
     connpath: ConnPath<'static, AConnection>,
     pub props: Properties,
+}
+
+impl fmt::Debug for Service {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Service")
+         .field("connpath", &"<elided>")
+         .field("props", &self.props)
+         .finish()
+    }
 }
 
 impl Service {
@@ -40,10 +53,10 @@ impl Service {
 
     pub fn connpath(path: dbus::Path<'static>, conn: AConnection) -> ConnPath<'static, AConnection> {
         let connpath = ConnPath {
-            conn: conn,
-            dest: "net.connman".into(),
+            connection: conn,
+            destination: "net.connman".into(),
             path,
-            timeout: 5000,
+            timeout: Duration::from_secs(5),
         };
         connpath
     }
@@ -58,7 +71,7 @@ impl Service {
     pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::service::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.connpath)
+        Introspectable::introspect(&self.connpath).await
             .map_err(ApiError::from)
             .map(|s| {
                 let rdr = std::io::Cursor::new(s.into_bytes());
@@ -67,23 +80,23 @@ impl Service {
     }
 
     pub async fn connect(&self) -> Result<(), ApiError> {
-        IService::connect(&self.connpath).map_err(ApiError::from)
+        IService::connect(&self.connpath).await.map_err(ApiError::from)
     }
 
-    pub fn disconnect(&self) -> Result<(), ApiError> {
-        IService::disconnect(&self.connpath).map_err(ApiError::from)
+    pub async fn disconnect(&self) -> Result<(), ApiError> {
+        IService::disconnect(&self.connpath).await.map_err(ApiError::from)
     }
 
-    pub fn remove(&self) -> Result<(), ApiError> {
-        IService::remove(&self.connpath).map_err(ApiError::from)
+    pub async fn remove(&self) -> Result<(), ApiError> {
+        IService::remove(&self.connpath).await.map_err(ApiError::from)
     }
 
-    pub fn move_before(&self, service: &Service) -> Result<(), ApiError> {
-        IService::move_before(&self.connpath, service.path().clone()).map_err(ApiError::from)
+    pub async fn move_before(&self, service: &Service) -> Result<(), ApiError> {
+        IService::move_before(&self.connpath, service.path().clone()).await.map_err(ApiError::from)
     }
 
-    pub fn move_after(&self, service: &Service) -> Result<(), ApiError> {
-        IService::move_after(&self.connpath, service.path().clone()).map_err(ApiError::from)
+    pub async fn move_after(&self, service: &Service) -> Result<(), ApiError> {
+        IService::move_after(&self.connpath, service.path().clone()).await.map_err(ApiError::from)
     }
 }
 

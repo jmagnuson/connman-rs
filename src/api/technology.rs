@@ -1,6 +1,11 @@
-use dbus::{arg, ConnPath};
+use dbus::{arg};
+use dbus::nonblock::Proxy as ConnPath;
 use futures::Future;
 use std::rc::Rc;
+use futures::TryFutureExt;
+use std::sync::Arc;
+use std::time::Duration;
+use std::fmt;
 
 use std::collections::HashMap;
 
@@ -17,10 +22,19 @@ type AConnection = Arc<dbus::nonblock::SyncConnection>;
 use xml::reader::EventReader;
 
 /// Futures-aware wrapper struct for connman Technology object.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Technology {
     connpath: ConnPath<'static, AConnection>,
     pub props: Properties,
+}
+
+impl fmt::Debug for Technology {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Technology")
+         .field("connpath", &"<elided>")
+         .field("props", &self.props)
+         .finish()
+    }
 }
 
 impl Technology {
@@ -41,10 +55,10 @@ impl Technology {
 
     pub fn connpath(path: dbus::Path<'static>, conn: AConnection) -> ConnPath<'static, AConnection> {
         let connpath = ConnPath {
-            conn: conn,
-            dest: "net.connman".into(),
+            connection: conn,
+            destination: "net.connman".into(),
             path,
-            timeout: 5000,
+            timeout: Duration::from_secs(5),
         };
         connpath
     }
@@ -59,7 +73,7 @@ impl Technology {
     pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::technology::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.connpath)
+        Introspectable::introspect(&self.connpath).await
             .map_err(ApiError::from)
             .map(|s| {
                 let rdr = std::io::Cursor::new(s.into_bytes());
@@ -68,19 +82,21 @@ impl Technology {
     }
 
     pub async fn scan(&self) -> Result<(), ApiError> {
-        ITechnology::scan(&self.connpath)
+        ITechnology::scan(&self.connpath).await
             .map_err(ApiError::from)
     }
 }
 
 impl Technology {
-    pub fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
+    pub async fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
         ITechnology::set_property(&self.connpath, PropertyKind::Powered.into(), arg::Variant(powered))
+            .await
             .map_err(|e| e.into())
     }
 
-    pub fn get_powered(&self) -> Result<bool, ApiError> {
+    pub async fn get_powered(&self) -> Result<bool, ApiError> {
         ITechnology::get_properties(&self.connpath)
+            .await
             .map_err(ApiError::from)
             .and_then(move |a|
                 super::get_property::<bool>(&a, PropertyKind::Powered.into())
@@ -88,8 +104,9 @@ impl Technology {
             )
     }
 
-    pub fn get_connected(&self) -> Result<bool, ApiError> {
+    pub async fn get_connected(&self) -> Result<bool, ApiError> {
         ITechnology::get_properties(&self.connpath)
+            .await
             .map_err(ApiError::from)
             .and_then(move |a|
                 super::get_property::<bool>(&a, PropertyKind::Connected.into())
@@ -97,8 +114,9 @@ impl Technology {
             )
     }
 
-    pub fn get_name(&self) -> Result<String, ApiError> {
+    pub async fn get_name(&self) -> Result<String, ApiError> {
         ITechnology::get_properties(&self.connpath)
+            .await
             .map_err(ApiError::from)
             .and_then(move |a|
                 super::get_property_fromstr::<String>(&a, PropertyKind::Name.into())
@@ -106,8 +124,9 @@ impl Technology {
             )
     }
 
-    pub fn get_type(&self) -> Result<Type, ApiError> {
+    pub async fn get_type(&self) -> Result<Type, ApiError> {
         ITechnology::get_properties(&self.connpath)
+            .await
             .map_err(ApiError::from)
             .and_then(move |a|
                 super::get_property_fromstr::<Type>(&a, PropertyKind::Type.into())

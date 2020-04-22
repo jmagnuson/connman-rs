@@ -1,6 +1,10 @@
 use dbus::arg::{RefArg, Variant};
-use dbus::ConnPath;
+use dbus::nonblock::Proxy as ConnPath;
 use futures::Future;
+use futures::TryFutureExt;
+use std::sync::Arc;
+use std::time::Duration;
+use std::fmt;
 
 type AConnection = Arc<dbus::nonblock::SyncConnection>;
 
@@ -15,10 +19,18 @@ use std::str::FromStr;
 use std::rc::Rc;
 
 /// Futures-aware wrapper struct for connman Manager object.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Manager {
     connpath: ConnPath<'static, AConnection>,
     // TODO: Signal subscription/dispatcher
+}
+
+impl fmt::Debug for Manager {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Manager")
+         .field("connpath", &"<elided>")
+         .finish()
+    }
 }
 
 impl Manager {
@@ -30,10 +42,10 @@ impl Manager {
 
     pub fn connpath(conn: AConnection) -> ConnPath<'static, AConnection> {
         let connpath = ConnPath {
-            conn: conn,
-            dest: "net.connman".into(),
+            connection: conn,
+            destination: "net.connman".into(),
             path: "/".into(),
-            timeout: 5000,
+            timeout: Duration::from_secs(5),
         };
         connpath
     }
@@ -41,9 +53,9 @@ impl Manager {
 
 impl Manager {
     pub async fn get_technologies(&self) -> Result<Vec<Technology>, Error> {
-        let connclone = self.connpath.conn.clone();
+        let connclone = self.connpath.connection.clone();
 
-        IManager::get_technologies(&self.connpath)
+        IManager::get_technologies(&self.connpath).await
             .map_err(Error::from)
             .map(move |v|
                 v.into_iter()
@@ -55,9 +67,9 @@ impl Manager {
     }
 
     pub async fn get_services(&self) -> Result<Vec<Service>, Error> {
-        let connclone = self.connpath.conn.clone();
+        let connclone = self.connpath.connection.clone();
 
-        IManager::get_services(&self.connpath)
+        IManager::get_services(&self.connpath).await
             .map_err(Error::from)
             .map(move |v|
                 v.into_iter()
@@ -74,7 +86,7 @@ impl Manager {
     pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, Error> {
         use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.connpath)
+        Introspectable::introspect(&self.connpath).await
             .map_err(Error::from)
             .map(|s| {
                 let rdr = std::io::Cursor::new(s.into_bytes());
@@ -83,7 +95,7 @@ impl Manager {
     }
 
     pub async fn get_state(&self) -> Result<State, Error> {
-        IManager::get_properties(&self.connpath)
+        IManager::get_properties(&self.connpath).await
             .map_err(Error::from)
             .and_then(move |a|
                 super::get_property_fromstr::<State>(&a, "State")
@@ -92,7 +104,7 @@ impl Manager {
     }
 
     pub async fn get_offline_mode(&self) -> Result<bool, Error> {
-        IManager::get_properties(&self.connpath)
+        IManager::get_properties(&self.connpath).await
             .map_err(Error::from)
             .and_then(move |a|
                 super::get_property::<bool>(&a, "OfflineMode")
@@ -101,7 +113,7 @@ impl Manager {
     }
 
     pub async fn set_offline_mode(&self, offline_mode: bool) -> Result<(), Error> {
-        IManager::set_property(&self.connpath, "OfflineMode", Variant(offline_mode))
+        IManager::set_property(&self.connpath, "OfflineMode", Variant(offline_mode)).await
             .map_err(Error::from)
     }
 }
