@@ -1,6 +1,5 @@
 use dbus::{arg, ConnPath};
 use dbus_tokio::AConnection;
-use futures::Future;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -55,7 +54,7 @@ impl Service {
 
 impl Service {
     #[cfg(feature = "introspection")]
-    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=ApiError> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::service::OrgFreedesktopDBusIntrospectable as Introspectable;
 
         Introspectable::introspect(&self.connpath)
@@ -66,23 +65,23 @@ impl Service {
             })
     }
 
-    pub fn connect(&self) -> impl Future<Item=(), Error=ApiError> {
+    pub async fn connect(&self) -> Result<(), ApiError> {
         IService::connect(&self.connpath).map_err(ApiError::from)
     }
 
-    pub fn disconnect(&self) -> impl Future<Item=(), Error=ApiError> {
+    pub fn disconnect(&self) -> Result<(), ApiError> {
         IService::disconnect(&self.connpath).map_err(ApiError::from)
     }
 
-    pub fn remove(&self) -> impl Future<Item=(), Error=ApiError> {
+    pub fn remove(&self) -> Result<(), ApiError> {
         IService::remove(&self.connpath).map_err(ApiError::from)
     }
 
-    pub fn move_before(&self, service: &Service) -> impl Future<Item=(), Error=ApiError> {
+    pub fn move_before(&self, service: &Service) -> Result<(), ApiError> {
         IService::move_before(&self.connpath, service.path().clone()).map_err(ApiError::from)
     }
 
-    pub fn move_after(&self, service: &Service) -> impl Future<Item=(), Error=ApiError> {
+    pub fn move_after(&self, service: &Service) -> Result<(), ApiError> {
         IService::move_after(&self.connpath, service.path().clone()).map_err(ApiError::from)
     }
 }

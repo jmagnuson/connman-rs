@@ -39,7 +39,7 @@ impl Manager {
 }
 
 impl Manager {
-    pub fn get_technologies(&self) -> impl Future<Item=Vec<Technology>, Error=Error> {
+    pub async fn get_technologies(&self) -> Result<Vec<Technology>, Error> {
         let connclone = self.connpath.conn.clone();
 
         IManager::get_technologies(&self.connpath)
@@ -53,7 +53,7 @@ impl Manager {
             )
     }
 
-    pub fn get_services(&self) -> impl Future<Item=Vec<Service>, Error=Error> {
+    pub async fn get_services(&self) -> Result<Vec<Service>, Error> {
         let connclone = self.connpath.conn.clone();
 
         IManager::get_services(&self.connpath)
@@ -70,7 +70,7 @@ impl Manager {
 
 impl Manager {
     #[cfg(feature = "introspection")]
-    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=Error> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, Error> {
         use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;
 
         Introspectable::introspect(&self.connpath)
@@ -81,7 +81,7 @@ impl Manager {
             })
     }
 
-    pub fn get_state(&self) -> impl Future<Item=State, Error=Error> {
+    pub async fn get_state(&self) -> Result<State, Error> {
         IManager::get_properties(&self.connpath)
             .map_err(Error::from)
             .and_then(move |a|
@@ -90,7 +90,7 @@ impl Manager {
             )
     }
 
-    pub fn get_offline_mode(&self) -> impl Future<Item=bool, Error=Error> {
+    pub async fn get_offline_mode(&self) -> Result<bool, Error> {
         IManager::get_properties(&self.connpath)
             .map_err(Error::from)
             .and_then(move |a|
@@ -99,7 +99,7 @@ impl Manager {
             )
     }
 
-    pub fn set_offline_mode(&self, offline_mode: bool) -> impl Future<Item=(), Error=Error> {
+    pub async fn set_offline_mode(&self, offline_mode: bool) -> Result<(), Error> {
         IManager::set_property(&self.connpath, "OfflineMode", Variant(offline_mode))
             .map_err(Error::from)
     }

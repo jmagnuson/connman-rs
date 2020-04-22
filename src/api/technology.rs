@@ -55,7 +55,7 @@ impl Technology {
 
 impl Technology {
     #[cfg(feature = "introspection")]
-    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=ApiError> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::technology::OrgFreedesktopDBusIntrospectable as Introspectable;
 
         Introspectable::introspect(&self.connpath)
@@ -66,19 +66,19 @@ impl Technology {
             })
     }
 
-    pub fn scan(&self) -> impl Future<Item=(), Error=ApiError> {
+    pub async fn scan(&self) -> Result<(), ApiError> {
         ITechnology::scan(&self.connpath)
             .map_err(ApiError::from)
     }
 }
 
 impl Technology {
-    pub fn set_powered(&self, powered: bool) -> impl Future<Item=(), Error=ApiError> {
+    pub fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
         ITechnology::set_property(&self.connpath, PropertyKind::Powered.into(), arg::Variant(powered))
             .map_err(|e| e.into())
     }
 
-    pub fn get_powered(&self) -> impl Future<Item=bool, Error=ApiError> {
+    pub fn get_powered(&self) -> Result<bool, ApiError> {
         ITechnology::get_properties(&self.connpath)
             .map_err(ApiError::from)
             .and_then(move |a|
@@ -87,7 +87,7 @@ impl Technology {
             )
     }
 
-    pub fn get_connected(&self) -> impl Future<Item=bool, Error=ApiError> {
+    pub fn get_connected(&self) -> Result<bool, ApiError> {
         ITechnology::get_properties(&self.connpath)
             .map_err(ApiError::from)
             .and_then(move |a|
@@ -96,7 +96,7 @@ impl Technology {
             )
     }
 
-    pub fn get_name(&self) -> impl Future<Item=String, Error=ApiError> {
+    pub fn get_name(&self) -> Result<String, ApiError> {
         ITechnology::get_properties(&self.connpath)
             .map_err(ApiError::from)
             .and_then(move |a|
@@ -105,7 +105,7 @@ impl Technology {
             )
     }
 
-    pub fn get_type(&self) -> impl Future<Item=Type, Error=ApiError> {
+    pub fn get_type(&self) -> Result<Type, ApiError> {
         ITechnology::get_properties(&self.connpath)
             .map_err(ApiError::from)
             .and_then(move |a|
