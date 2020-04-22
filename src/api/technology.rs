@@ -1,5 +1,4 @@
 use dbus::{arg, ConnPath};
-use dbus_tokio::AConnection;
 use futures::Future;
 use std::rc::Rc;
 
@@ -12,19 +11,21 @@ use std::borrow::Cow;
 use std::convert::TryFrom;
 use crate::api::{PropertyError, FromProperties};
 
+type AConnection = Arc<dbus::nonblock::SyncConnection>;
+
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
 
 /// Futures-aware wrapper struct for connman Technology object.
 #[derive(Clone, Debug)]
 pub struct Technology {
-    connpath: ConnPath<'static, Rc<AConnection>>,
+    connpath: ConnPath<'static, AConnection>,
     pub props: Properties,
 }
 
 impl Technology {
     pub fn new(
-        connection: Rc<AConnection>,
+        connection: AConnection,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
@@ -38,7 +39,7 @@ impl Technology {
             })
     }
 
-    pub fn connpath(path: dbus::Path<'static>, conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
+    pub fn connpath(path: dbus::Path<'static>, conn: AConnection) -> ConnPath<'static, AConnection> {
         let connpath = ConnPath {
             conn: conn,
             dest: "net.connman".into(),

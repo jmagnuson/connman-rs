@@ -1,7 +1,8 @@
 use dbus::arg::{RefArg, Variant};
 use dbus::ConnPath;
-use dbus_tokio::AConnection;
 use futures::Future;
+
+type AConnection = Arc<dbus::nonblock::SyncConnection>;
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
@@ -16,18 +17,18 @@ use std::rc::Rc;
 /// Futures-aware wrapper struct for connman Manager object.
 #[derive(Clone, Debug)]
 pub struct Manager {
-    connpath: ConnPath<'static, Rc<AConnection>>,
+    connpath: ConnPath<'static, AConnection>,
     // TODO: Signal subscription/dispatcher
 }
 
 impl Manager {
-    pub fn new(connection: Rc<AConnection>) -> Self {
+    pub fn new(connection: AConnection) -> Self {
         Manager {
             connpath: Self::connpath(connection),
         }
     }
 
-    pub fn connpath(conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
+    pub fn connpath(conn: AConnection) -> ConnPath<'static, AConnection> {
         let connpath = ConnPath {
             conn: conn,
             dest: "net.connman".into(),

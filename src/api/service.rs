@@ -1,9 +1,10 @@
 use dbus::{arg, ConnPath};
-use dbus_tokio::AConnection;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
+
+type AConnection = Arc<dbus::nonblock::SyncConnection>;
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
@@ -18,13 +19,13 @@ use dbus::arg::{Variant, RefArg, cast};
 /// Futures-aware wrapper struct for connman Service object.
 #[derive(Debug)]
 pub struct Service {
-    connpath: ConnPath<'static, Rc<AConnection>>,
+    connpath: ConnPath<'static, AConnection>,
     pub props: Properties,
 }
 
 impl Service {
     pub fn new(
-        connection: Rc<AConnection>,
+        connection: AConnection,
         path: dbus::Path<'static>,
         args: RefArgMap,
     ) -> Result<Self, ApiError> {
@@ -37,7 +38,7 @@ impl Service {
         })
     }
 
-    pub fn connpath(path: dbus::Path<'static>, conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
+    pub fn connpath(path: dbus::Path<'static>, conn: AConnection) -> ConnPath<'static, AConnection> {
         let connpath = ConnPath {
             conn: conn,
             dest: "net.connman".into(),
