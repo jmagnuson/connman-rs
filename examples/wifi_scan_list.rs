@@ -26,10 +26,12 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let wifi = get_technology_wifi(&manager).await.unwrap().unwrap();
 
-    let services = timeout(
+    let _ = timeout(
         Duration::from_secs(5),
         wifi.scan()
     ).await.unwrap();
+
+    let services = manager.get_services().await.unwrap();
 
     for svc in services {
         // Dump service info
