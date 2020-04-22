@@ -15,39 +15,27 @@
 //! the available services.
 //!
 //! ```rust,no_run
-//! extern crate connman;
-//! extern crate dbus;
-//! extern crate dbus_tokio;
-//! extern crate futures;
-//! extern crate tokio;
-//!
 //! use connman::Manager;
-//! use dbus::{BusType, Connection};
-//! use dbus_tokio::AConnection;
-//! use futures::Future;
-//! use tokio::reactor::Handle;
-//! use tokio::runtime::current_thread::Runtime;
+//! use dbus_tokio::connection;
 //!
-//! use std::rc::Rc;
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let (resource, aconn) = connection::new_system_sync().unwrap();
 //!
-//! fn main() {
-//!     let mut runtime = Runtime::new().unwrap();
-//!
-//!     let conn = Rc::new(Connection::get_private(BusType::System).unwrap());
-//!     let aconn = Rc::new(AConnection::new(conn.clone(), Handle::default(), &mut runtime).unwrap());
+//!     tokio::spawn(async {
+//!         let err = resource.await;
+//!         panic!("Lost connection to d-bus: {}", err);
+//!     });
 //!
 //!     let manager = Manager::new(aconn);
 //!
-//!     let f = manager.get_services()
-//!         .and_then(|services| {
-//!             for svc in services {
-//!                 // Dump service info
-//!                 println!("Found service: {:?}", svc)
-//!             }
-//!             Ok(())
-//!         });
+//!     let services = manager.get_services().await.unwrap();
 //!
-//!     runtime.block_on(f).unwrap();
+//!     for svc in services {
+//!         // Dump service info
+//!         println!("Found service: {:?}", svc)
+//!     }
+//!     Ok(())
 //! }
 //! ```
 
