@@ -13,7 +13,7 @@ use tokio::time::timeout;
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Connect to the D-Bus session bus (this is blocking, unfortunately).
-    let (resource, conn) = connection::new_session_sync().unwrap();
+    let (resource, conn) = connection::new_system_sync().unwrap();
 
     // The resource is a task that should be spawned onto a tokio compatible
     // reactor ASAP. If the resource ever finishes, you lost connection to D-Bus.
