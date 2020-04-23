@@ -56,7 +56,7 @@ impl Service {
             connection: conn,
             destination: "net.connman".into(),
             path,
-            timeout: Duration::from_secs(5),
+            timeout: Duration::from_secs(10),
         };
         connpath
     }
