@@ -27,11 +27,9 @@ before_script:
 script:
   - cargo test
   - cargo build --example wifi_scan_list
-  #- cargo build --features=introspection --example wifi_introspect
-  - sleep 5
+  - cargo build --features=introspection --example wifi_introspect
   - cargo build --example wifi_connect
-  #- sudo target/debug/examples/wifi_introspect
-  - sleep 5
+  - sudo target/debug/examples/wifi_introspect
   - sudo target/debug/examples/wifi_scan_list
   - sudo mkdir -p /usr/local/var/lib/connman
   - sudo target/debug/examples/wifi_connect -p mypassword myssid
