@@ -22,6 +22,8 @@ before_script:
   - sleep 5
   - sudo connmanctl scan wifi
   - sleep 5
+  - sudo connmanctl scan wifi
+  - sleep 5
   - sudo connmanctl services
 
 script:
