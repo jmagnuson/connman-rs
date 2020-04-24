@@ -9,6 +9,7 @@ pub mod technology;
 
 use dbus;
 use dbus::arg::{cast, RefArg, Variant};
+use thiserror::Error;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -18,34 +19,22 @@ type RefArgMap = HashMap<String, Variant<Box<dyn RefArg + 'static>>>;
 type RefArgMapRef<'a> = HashMap<String, &'a dyn RefArg>;
 type RefArgIter<'a> = Box<dyn Iterator<Item=&'a dyn RefArg> + 'a>;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "{}", _0)]
-    DbusError(#[cause] dbus::Error),
-    #[fail(display = "'{}'", _0)]
-    PropertyError(#[cause] PropertyError),
-    #[fail(display = "Failed resolve before timeout: '{}'", _0)]
-    Timeout(Cow<'static, str>)
+    #[error("{0}")]
+    DbusError(#[from] dbus::Error),
+    #[error("'{0}'")]
+    PropertyError(#[from] PropertyError),
+    #[error("Failed resolve before timeout: '{0}'")]
+    Timeout(Cow<'static, str>),
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum PropertyError {
-    #[fail(display = "Property not present: '{}'", _0)]
+    #[error("Property not present: '{0}'")]
     NotPresent(Cow<'static, str>),
-    #[fail(display = "Failed to cast property: '{}'", _0)]
-    Cast(Cow<'static, str>)
-}
-
-impl From<PropertyError> for Error {
-    fn from(e: PropertyError) -> Self {
-        Error::PropertyError(e)
-    }
-}
-
-impl From<dbus::Error> for Error {
-    fn from(e: dbus::Error) -> Self {
-        Error::DbusError(e)
-    }
+    #[error("Failed to cast property: '{0}'")]
+    Cast(Cow<'static, str>),
 }
 
 /// Convenience function for getting property values.
