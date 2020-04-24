@@ -1,107 +1,86 @@
 use dbus::arg::{RefArg, Variant};
-use dbus::ConnPath;
-use dbus_tokio::AConnection;
-use futures::Future;
+use dbus::nonblock::{NonblockReply, Proxy, SyncConnection};
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
 
 use super::gen::manager::Manager as IManager;
-use super::service::{Service, Properties as ServiceProperties};
+use super::service::{Properties as ServiceProperties, Service};
 use super::technology::Technology;
 use super::Error;
+use std::future::Future;
+use std::ops::Deref;
 use std::str::FromStr;
-use std::rc::Rc;
+use std::time::Duration;
 
 /// Futures-aware wrapper struct for connman Manager object.
-#[derive(Clone, Debug)]
-pub struct Manager {
-    connpath: ConnPath<'static, Rc<AConnection>>,
+#[derive(Clone)]
+pub struct Manager<C> {
+    proxy: Proxy<'static, C>,
+    timeout: Duration,
     // TODO: Signal subscription/dispatcher
 }
 
-impl Manager {
-    pub fn new(connection: Rc<AConnection>) -> Self {
+impl<C> Manager<C> {
+    pub fn new(connection: C, timeout: Duration) -> Self {
         Manager {
-            connpath: Self::connpath(connection),
+            proxy: Self::proxy(timeout, connection),
+            timeout,
         }
     }
 
-    pub fn connpath(conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
-        let connpath = ConnPath {
-            conn: conn,
-            dest: "net.connman".into(),
-            path: "/".into(),
-            timeout: 5000,
-        };
-        connpath
+    pub fn proxy(timeout: Duration, conn: C) -> Proxy<'static, C> {
+        let proxy = Proxy::new("net.connman", "/", timeout, conn);
+        proxy
     }
 }
 
-impl Manager {
-    pub fn get_technologies(&self) -> impl Future<Item=Vec<Technology>, Error=Error> {
-        let connclone = self.connpath.conn.clone();
+impl<T: NonblockReply, C: Deref<Target = T> + Clone> Manager<C> {
+    pub async fn get_technologies(&self) -> Result<Vec<Technology<C>>, Error> {
+        let connclone = self.proxy.connection.clone();
 
-        IManager::get_technologies(&self.connpath)
-            .map_err(Error::from)
-            .map(move |v|
-                v.into_iter()
-                    .filter_map(|(path, args)| {
-                        Technology::new(connclone.clone(), path, args).ok()
-                    })
-                    .collect()
-            )
+        let v = IManager::get_technologies(&self.proxy).await?;
+        Ok(v.into_iter()
+            .filter_map(|(path, args)| {
+                Technology::new(connclone.clone(), path, args, self.timeout).ok()
+            })
+            .collect())
     }
 
-    pub fn get_services(&self) -> impl Future<Item=Vec<Service>, Error=Error> {
-        let connclone = self.connpath.conn.clone();
+    pub async fn get_services(&self) -> Result<Vec<Service<C>>, Error> {
+        let connclone = self.proxy.connection.clone();
 
-        IManager::get_services(&self.connpath)
-            .map_err(Error::from)
-            .map(move |v|
-                v.into_iter()
-                    .filter_map(|(path, args)| {
-                        Service::new(connclone.clone(), path, args).ok()
-                    })
-                    .collect()
-            )
+        let v = IManager::get_services(&self.proxy).await?;
+        Ok(v.into_iter()
+            .filter_map(|(path, args)| {
+                Service::new(connclone.clone(), path, args, self.timeout).ok()
+            })
+            .collect())
     }
 }
 
-impl Manager {
+impl<T: NonblockReply, C: Deref<Target = T>> Manager<C> {
     #[cfg(feature = "introspection")]
-    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=Error> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, Error> {
         use crate::api::gen::manager::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.connpath)
-            .map_err(Error::from)
-            .map(|s| {
-                let rdr = std::io::Cursor::new(s.into_bytes());
-                EventReader::new(rdr)
-            })
+        let s = Introspectable::introspect(&self.proxy).await?;
+        let rdr = std::io::Cursor::new(s.into_bytes());
+        Ok(EventReader::new(rdr))
     }
 
-    pub fn get_state(&self) -> impl Future<Item=State, Error=Error> {
-        IManager::get_properties(&self.connpath)
-            .map_err(Error::from)
-            .and_then(move |a|
-                super::get_property_fromstr::<State>(&a, "State")
-                    .map_err(Error::from)
-            )
+    pub async fn get_state(&self) -> Result<State, Error> {
+        let a = IManager::get_properties(&self.proxy).await?;
+        Ok(super::get_property_fromstr::<State>(&a, "State")?)
     }
 
-    pub fn get_offline_mode(&self) -> impl Future<Item=bool, Error=Error> {
-        IManager::get_properties(&self.connpath)
-            .map_err(Error::from)
-            .and_then(move |a|
-                super::get_property::<bool>(&a, "OfflineMode")
-                    .map_err(Error::from)
-            )
+    pub async fn get_offline_mode(&self) -> Result<bool, Error> {
+        let a = IManager::get_properties(&self.proxy).await?;
+        Ok(super::get_property::<bool>(&a, "OfflineMode")?)
     }
 
-    pub fn set_offline_mode(&self, offline_mode: bool) -> impl Future<Item=(), Error=Error> {
-        IManager::set_property(&self.connpath, "OfflineMode", Variant(offline_mode))
-            .map_err(Error::from)
+    pub async fn set_offline_mode(&self, offline_mode: bool) -> Result<(), Error> {
+        Ok(IManager::set_property(&self.proxy, "OfflineMode", offline_mode).await?)
     }
 }
 
