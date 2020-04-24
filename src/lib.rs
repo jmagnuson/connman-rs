@@ -18,6 +18,8 @@
 //! use connman::Manager;
 //! use dbus_tokio::connection;
 //!
+//! use std::time::Duration;
+//!
 //! #[tokio::main]
 //! async fn main() {
 //!     let (resource, conn) = connection::new_system_sync().unwrap();
@@ -26,7 +28,7 @@
 //!         panic!("Lost connection to D-Bus: {}", err);
 //!     });
 //!
-//!     let manager = Manager::new(conn);
+//!     let manager = Manager::new(conn, Duration::from_secs(10));
 //!
 //!     let services = manager.get_services().await.unwrap();
 //!     for svc in services {
