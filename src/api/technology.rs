@@ -64,12 +64,7 @@ impl<T: NonblockReply, C: Deref<Target = T>> Technology<C> {
 
 impl<T: NonblockReply, C: Deref<Target = T>> Technology<C> {
     pub async fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
-        Ok(ITechnology::set_property(
-            &self.proxy,
-            PropertyKind::Powered.into(),
-            arg::Variant(Box::new(powered)),
-        )
-        .await?)
+        Ok(ITechnology::set_property(&self.proxy, PropertyKind::Powered.into(), powered).await?)
     }
 
     pub async fn get_powered(&self) -> Result<bool, ApiError> {

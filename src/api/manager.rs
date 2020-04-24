@@ -74,10 +74,7 @@ impl<T: NonblockReply, C: Deref<Target = T>> Manager<C> {
     }
 
     pub async fn set_offline_mode(&self, offline_mode: bool) -> Result<(), Error> {
-        Ok(
-            IManager::set_property(&self.proxy, "OfflineMode", Variant(Box::new(offline_mode)))
-                .await?,
-        )
+        Ok(IManager::set_property(&self.proxy, "OfflineMode", offline_mode).await?)
     }
 }
 
