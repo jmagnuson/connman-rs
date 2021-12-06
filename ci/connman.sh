@@ -13,7 +13,7 @@ do_action_prep() {
         gnutls-dev \
         gnutls-bin \
         xtables-addons-common \
-        xtables-addons-source \
+        xtables-addons-source
 
     # TODO: Install deps to be able to run stock `bootstrap-config`
     #sudo apt install openconnect

@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use dbus::arg;
 use dbus::nonblock::{NonblockReply, Proxy, SyncConnection};
 use std::sync::Arc;

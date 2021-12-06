@@ -1,5 +1,7 @@
 //! D-Bus API implementations
 
+#![allow(clippy::unnecessary_lazy_evaluations)]
+
 #[rustfmt::skip]
 mod gen;
 

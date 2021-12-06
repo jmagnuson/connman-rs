@@ -90,7 +90,7 @@ async fn main() {
     if !args.disconnect {
         let prov = generate_wifi_config(
             args.ssid.as_str(),
-            args.password.as_ref().map(|s| s.as_str()),
+            args.password.as_deref(),
         );
 
         write_wifi_service_config(prov.as_str()).expect("Failed to write wifi service config");
@@ -118,13 +118,8 @@ async fn main() {
     let maybe_svc = services.iter().find(|svc| {
         //wifi_ffffffffffff_00112233aabbccdd_managed_psk
         //tech_mac.addr...._hex.ssid........_security...
-        let pathv = svc
-            .path()
-            .as_cstr()
-            .to_str()
-            .unwrap()
-            .split("_")
-            .collect::<Vec<&str>>();
+        let path_cs = svc.path().clone().into_cstring().into_string().unwrap();
+        let pathv = path_cs.split('_').collect::<Vec<&str>>();
         let svc_hex_ssid = *pathv.get(2).unwrap();
         let found = svc_hex_ssid == hex_ssid;
         if found {

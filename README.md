@@ -37,7 +37,7 @@ async fn main() {
         panic!("Lost connection to D-Bus: {}", err);
     });
 
-    let manager = Manager::new(conn);
+    let manager = Manager::new(conn, Duration::from_secs(10));
 
     let services = manager.get_services().await.unwrap();
     for svc in services {
