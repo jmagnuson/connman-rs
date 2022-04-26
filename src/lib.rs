@@ -6,7 +6,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! connman = "0.1"
+//! connman = "0.2"
 //! ```
 
 //! ## Example
@@ -15,57 +15,32 @@
 //! the available services.
 //!
 //! ```rust,no_run
-//! extern crate connman;
-//! extern crate dbus;
-//! extern crate dbus_tokio;
-//! extern crate futures;
-//! extern crate tokio;
-//!
 //! use connman::Manager;
-//! use dbus::{BusType, Connection};
-//! use dbus_tokio::AConnection;
-//! use futures::Future;
-//! use tokio::reactor::Handle;
-//! use tokio::runtime::current_thread::Runtime;
+//! use dbus_tokio::connection;
 //!
-//! use std::rc::Rc;
+//! use std::time::Duration;
 //!
-//! fn main() {
-//!     let mut runtime = Runtime::new().unwrap();
+//! #[tokio::main]
+//! async fn main() {
+//!     let (resource, conn) = connection::new_system_sync().unwrap();
+//!     tokio::spawn(async {
+//!         let err = resource.await;
+//!         panic!("Lost connection to D-Bus: {}", err);
+//!     });
 //!
-//!     let conn = Rc::new(Connection::get_private(BusType::System).unwrap());
-//!     let aconn = Rc::new(AConnection::new(conn.clone(), Handle::default(), &mut runtime).unwrap());
+//!     let manager = Manager::new(conn, Duration::from_secs(10));
 //!
-//!     let manager = Manager::new(aconn);
-//!
-//!     let f = manager.get_services()
-//!         .and_then(|services| {
-//!             for svc in services {
-//!                 // Dump service info
-//!                 println!("Found service: {:?}", svc)
-//!             }
-//!             Ok(())
-//!         });
-//!
-//!     runtime.block_on(f).unwrap();
+//!     let services = manager.get_services().await.unwrap();
+//!     for svc in services {
+//!         // Dump service info
+//!         println!("Found service: {:?}", svc.path())
+//!     }
 //! }
 //! ```
 
 #![allow(unused)]
 #![allow(clippy::redundant_field_names, clippy::let_and_return)]
 
-extern crate dbus;
-extern crate dbus_tokio;
-extern crate futures;
-extern crate tokio;
-
-#[cfg(feature = "introspection")]
-extern crate xml;
-
 pub mod api;
 
-pub use crate::api::{
-    manager::Manager,
-    service::Service,
-    technology::Technology,
-};
+pub use crate::api::{manager::Manager, service::Service, technology::Technology};

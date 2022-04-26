@@ -3,8 +3,7 @@
 [![crates.io](http://meritbadge.herokuapp.com/connman)](https://crates.io/crates/connman)
 [![Build Status](https://travis-ci.org/jmagnuson/connman-rs.svg?branch=master)](https://travis-ci.org/jmagnuson/connman-rs)
 
-A [ConnMan] API library that abstracts the D-Bus layer using `dbus-tokio` and
-`futures`.
+A [ConnMan] API library that abstracts the D-Bus layer using `dbus-tokio`.
 
 The API is still under development, and may be subject to change.
 
@@ -18,46 +17,33 @@ Add connman-rs to your `Cargo.toml` with:
 
 ```toml
 [dependencies]
-connman = "0.1"
+connman = "0.2"
 ```
 
 ## Example
 
 The following example demonstrates how to create a `Manager` and list
 the available services.
- 
+
 ```rust,no_run
-extern crate connman;
-extern crate dbus;
-extern crate dbus_tokio;
-extern crate tokio;
-
 use connman::Manager;
-use dbus::{BusType, Connection};
-use dbus_tokio::AConnection;
-use tokio::reactor::Handle;
-use tokio::runtime::current_thread::Runtime;
+use dbus_tokio::connection;
 
-use std::rc::Rc;
+#[tokio::main]
+async fn main() {
+    let (resource, conn) = connection::new_system_sync().unwrap();
+    tokio::spawn(async {
+        let err = resource.await;
+        panic!("Lost connection to D-Bus: {}", err);
+    });
 
-fn main() {
-    let mut runtime = Runtime::new().unwrap();
+    let manager = Manager::new(conn);
 
-    let conn = Rc::new(Connection::get_private(BusType::System).unwrap());
-    let aconn = Rc::new(AConnection::new(conn.clone(), Handle::default(), &mut runtime).unwrap());
-    
-    let manager = Manager::new(aconn);
-    
-    let f = manager.get_services()
-        .and_then(|services| {
-            for svc in services {
-                // Dump service info
-                println!("Found service: {:?}", svc)
-            }
-            Ok(())
-        });
-    
-    runtime.block_on(f).unwrap();
+    let services = manager.get_services().await.unwrap();
+    for svc in services {
+        // Dump service info
+        println!("Found service: {:?}", svc.path())
+    }
 }
 ```
 

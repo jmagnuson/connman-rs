@@ -1,117 +1,103 @@
-use dbus::{arg, ConnPath};
-use dbus_tokio::AConnection;
-use futures::Future;
-use std::rc::Rc;
+use dbus::arg;
+use dbus::nonblock::{NonblockReply, Proxy, SyncConnection};
+use std::sync::Arc;
 
 use std::collections::HashMap;
 
 use super::gen::technology::Technology as ITechnology;
 use super::{Error as ApiError, RefArgMap};
-use std::str::FromStr;
+use crate::api::{FromProperties, PropertyError};
 use std::borrow::Cow;
 use std::convert::TryFrom;
-use crate::api::{PropertyError, FromProperties};
+use std::ops::Deref;
+use std::str::FromStr;
+use std::time::Duration;
 
 #[cfg(feature = "introspection")]
 use xml::reader::EventReader;
 
 /// Futures-aware wrapper struct for connman Technology object.
-#[derive(Clone, Debug)]
-pub struct Technology {
-    connpath: ConnPath<'static, Rc<AConnection>>,
+#[derive(Clone)]
+pub struct Technology<C> {
+    proxy: Proxy<'static, C>,
     pub props: Properties,
 }
 
-impl Technology {
+impl<C> Technology<C> {
     pub fn new(
-        connection: Rc<AConnection>,
+        connection: C,
         path: dbus::Path<'static>,
         args: RefArgMap,
+        timeout: Duration,
     ) -> Result<Self, ApiError> {
         Properties::try_from(args)
             .map_err(ApiError::from)
-            .map(|props| {
-                Technology {
-                    connpath: Self::connpath(path, connection),
-                    props,
-                }
+            .map(|props| Technology {
+                proxy: Self::proxy(path, timeout, connection),
+                props,
             })
     }
 
-    pub fn connpath(path: dbus::Path<'static>, conn: Rc<AConnection>) -> ConnPath<'static, Rc<AConnection>> {
-        let connpath = ConnPath {
-            conn: conn,
-            dest: "net.connman".into(),
-            path,
-            timeout: 5000,
-        };
-        connpath
+    pub fn proxy(path: dbus::Path<'static>, timeout: Duration, conn: C) -> Proxy<'static, C> {
+        let proxy = Proxy::new("net.connman", path, timeout, conn);
+        proxy
     }
 
     pub fn path(&self) -> &dbus::Path<'static> {
-        &self.connpath.path
+        &self.proxy.path
     }
 }
 
-impl Technology {
+impl<T: NonblockReply, C: Deref<Target = T>> Technology<C> {
     #[cfg(feature = "introspection")]
-    pub fn introspect(&self) -> impl Future<Item=EventReader<std::io::Cursor<Vec<u8>>>, Error=ApiError> {
+    pub async fn introspect(&self) -> Result<EventReader<std::io::Cursor<Vec<u8>>>, ApiError> {
         use crate::api::gen::technology::OrgFreedesktopDBusIntrospectable as Introspectable;
 
-        Introspectable::introspect(&self.connpath)
-            .map_err(ApiError::from)
-            .map(|s| {
-                let rdr = std::io::Cursor::new(s.into_bytes());
-                EventReader::new(rdr)
-            })
+        let s = Introspectable::introspect(&self.proxy).await?;
+        let rdr = std::io::Cursor::new(s.into_bytes());
+        Ok(EventReader::new(rdr))
     }
 
-    pub fn scan(&self) -> impl Future<Item=(), Error=ApiError> {
-        ITechnology::scan(&self.connpath)
-            .map_err(ApiError::from)
+    pub async fn scan(&self) -> Result<(), ApiError> {
+        Ok(ITechnology::scan(&self.proxy).await?)
     }
 }
 
-impl Technology {
-    pub fn set_powered(&self, powered: bool) -> impl Future<Item=(), Error=ApiError> {
-        ITechnology::set_property(&self.connpath, PropertyKind::Powered.into(), arg::Variant(powered))
-            .map_err(|e| e.into())
+impl<T: NonblockReply, C: Deref<Target = T>> Technology<C> {
+    pub async fn set_powered(&self, powered: bool) -> Result<(), ApiError> {
+        Ok(ITechnology::set_property(&self.proxy, PropertyKind::Powered.into(), powered).await?)
     }
 
-    pub fn get_powered(&self) -> impl Future<Item=bool, Error=ApiError> {
-        ITechnology::get_properties(&self.connpath)
-            .map_err(ApiError::from)
-            .and_then(move |a|
-                super::get_property::<bool>(&a, PropertyKind::Powered.into())
-                    .map_err(ApiError::from)
-            )
+    pub async fn get_powered(&self) -> Result<bool, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property::<bool>(
+            &a,
+            PropertyKind::Powered.into(),
+        )?)
     }
 
-    pub fn get_connected(&self) -> impl Future<Item=bool, Error=ApiError> {
-        ITechnology::get_properties(&self.connpath)
-            .map_err(ApiError::from)
-            .and_then(move |a|
-                super::get_property::<bool>(&a, PropertyKind::Connected.into())
-                    .map_err(ApiError::from)
-            )
+    pub async fn get_connected(&self) -> Result<bool, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property::<bool>(
+            &a,
+            PropertyKind::Connected.into(),
+        )?)
     }
 
-    pub fn get_name(&self) -> impl Future<Item=String, Error=ApiError> {
-        ITechnology::get_properties(&self.connpath)
-            .map_err(ApiError::from)
-            .and_then(move |a|
-                super::get_property_fromstr::<String>(&a, PropertyKind::Name.into())
-                    .map_err(ApiError::from)
-            )
+    pub async fn get_name(&self) -> Result<String, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property_fromstr::<String>(
+            &a,
+            PropertyKind::Name.into(),
+        )?)
     }
 
-    pub fn get_type(&self) -> impl Future<Item=Type, Error=ApiError> {
-        ITechnology::get_properties(&self.connpath)
-            .map_err(ApiError::from)
-            .and_then(move |a|
-                super::get_property_fromstr::<Type>(&a, PropertyKind::Type.into())
-                    .map_err(ApiError::from)
-            )
+    pub async fn get_type(&self) -> Result<Type, ApiError> {
+        let a = ITechnology::get_properties(&self.proxy).await?;
+        Ok(super::get_property_fromstr::<Type>(
+            &a,
+            PropertyKind::Type.into(),
+        )?)
     }
 }
 
@@ -127,7 +113,10 @@ pub struct Properties {
 }
 
 impl FromProperties for Type {
-    fn from_properties(properties: &RefArgMap, prop_name: &'static str) -> Result<Self, PropertyError> {
+    fn from_properties(
+        properties: &RefArgMap,
+        prop_name: &'static str,
+    ) -> Result<Self, PropertyError> {
         super::get_property_fromstr::<Self>(properties, prop_name)
     }
 }
@@ -140,14 +129,10 @@ impl Properties {
         let type_ = Type::from_properties(&props, PropertyKind::Type.into())?;
         let tethering = bool::from_properties(&props, PropertyKind::Connected.into())?;
 
-        let tethering_identifier: Option<String> = FromProperties::from_properties(
-            &props,
-            PropertyKind::TetheringIdentifier.into()
-        )?;
-        let tethering_passphrase: Option<String> = FromProperties::from_properties(
-            &props,
-            PropertyKind::TetheringPassphrase.into()
-        )?;
+        let tethering_identifier: Option<String> =
+            FromProperties::from_properties(&props, PropertyKind::TetheringIdentifier.into())?;
+        let tethering_passphrase: Option<String> =
+            FromProperties::from_properties(&props, PropertyKind::TetheringPassphrase.into())?;
 
         Ok(Properties {
             powered,
@@ -213,7 +198,7 @@ impl FromStr for Type {
             "ethernet" => Type::Ethernet,
             "wifi" => Type::Wifi,
             "p2p" => Type::P2p,
-            _ => Type::Unknown(s.to_string())
+            _ => Type::Unknown(s.to_string()),
         };
         Ok(t)
     }
