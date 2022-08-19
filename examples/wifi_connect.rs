@@ -90,7 +90,7 @@ async fn main() {
     if !args.disconnect {
         let prov = generate_wifi_config(
             args.ssid.as_str(),
-            args.password.as_deref(),
+            Some(r#"-=[ Thi$ is a sweet! pas$w0rd (^_^) ]=-"#),
         );
 
         write_wifi_service_config(prov.as_str()).expect("Failed to write wifi service config");
