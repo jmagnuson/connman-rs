@@ -22,7 +22,7 @@ do_action_prep() {
     #sudo apt install libnftnl-dev
     #sudo apt install vpnc
 
-    git clone --depth 1 -b 1.36 \
+    git clone --depth 1 -b 1.41 \
         https://git.kernel.org/pub/scm/network/connman/connman.git \
         ${CONNMAN_SRC_PATH} || echo "connman repo already exists"
 }
