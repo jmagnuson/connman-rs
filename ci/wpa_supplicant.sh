@@ -14,7 +14,7 @@ do_action_prep() {
         libnl-route-3-dev \
         libssl-dev
 
-    git clone --depth 1 -b hostap_2_7 \
+    git clone --depth 1 -b hostap_2_10 \
         git://w1.fi/hostap.git \
         ${WPA_SUPPLICANT_SRC_PATH} || echo "supplicant repo already exists"
 }

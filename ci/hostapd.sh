@@ -6,7 +6,7 @@ HOSTAP_SRC_PATH="./hostap"
 HOSTAPD_PATH="hostapd"
 
 do_action_prep() {
-    git clone --depth 1 -b hostap_2_7 \
+    git clone --depth 1 -b hostap_2_10 \
         git://w1.fi/hostap.git \
         ${HOSTAP_SRC_PATH} || echo "hostap repo already exists"
 }
