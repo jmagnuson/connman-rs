@@ -32,7 +32,7 @@ script:
   - sudo target/debug/examples/wifi_introspect
   - sudo target/debug/examples/wifi_scan_list
   - sudo mkdir -p /usr/local/var/lib/connman
-  - sudo target/debug/examples/wifi_connect -p mypassword myssid
+  - sudo target/debug/examples/wifi_connect -p '-=[ Thi$ is a sweet! pas$w0rd (^_^) ]=-' myssid
   - sleep 5
   - sudo connmanctl services
   - sudo target/debug/examples/wifi_connect --disconnect myssid
