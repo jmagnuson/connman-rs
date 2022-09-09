@@ -23,7 +23,9 @@ find . -name mac80211_hwsim.ko
 sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure
 
 sudo depmod -a
-sudo modprobe mac80211_hwsim
+sudo modprobe mac80211_hwsim || echo 'failed to modprobe, try insmod'
+sudo insmod /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko
+
 echo "search again"
 cd 5.15.0-1019-azure
 find .
