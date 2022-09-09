@@ -27,12 +27,15 @@ find . -name mac80211_hwsim.ko
 
 # TODO: use the result of `find`, since 5.15.0-XX could change
 # originally threw: modprobe: FATAL: Module mac80211_hwsim not found in directory /lib/modules/5.15.0-1019-azure
-sudo mkdir -p /lib/modules/$AZURE_KERNEL_VER/kernel/drivers/net/wireless/
-sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure/kernel/drivers/net/wireless/
+HWSIM_MODULE_PATH="kernel/drivers/net/wireless"
+HWSIM_MODULE_NAME="mac80211_hwsim.ko"
+sudo mkdir -p /lib/modules/$AZURE_KERNEL_VER/${HWSIM_MODULE_PATH}
+sudo ln -s /lib/modules/5.15.0-46-generic/${HWSIM_MODULE_PATH}/${HWSIM_MODULE_NAME} /lib/modules/${AZURE_KERNEL_VER}/${HWSIM_MODULE_PATH}/${HWSIM_MODULE_NAME}
+find . -name mac80211_hwsim.ko
+#sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure/kernel/drivers/net/wireless/
 
 sudo depmod -a
-sudo modprobe mac80211_hwsim || echo 'modprobe failed, try insmod'
-find . -name mac80211_hwsim.ko -exec sudo insmod {} \;
+sudo modprobe mac80211_hwsim || echo 'modprobe failed, try insmod' && find . -name mac80211_hwsim.ko -exec sudo insmod -f {} \;
 #sudo insmod /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko
 
 echo "search again"
