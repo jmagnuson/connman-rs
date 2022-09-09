@@ -10,21 +10,25 @@ AZURE_KERNEL_VER="5.15.0-1019-azure"
 
 echo show linux-image-extra
 sudo apt-get install wireless-crda
-echo try to instaall linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64
 #curl http://archive.ubuntu.com/ubuntu/pool/main/l/linux-azure/linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64.deb --output linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64.deb
 
-#curl http://archive.ubuntu.com/ubuntu/pool/main/l/linux-azure/linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb \
-  #--output linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb
-#sudo dpkg -i linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb
-sudo apt-get install linux-generic
-sudo apt-get install linux-image-extra-virtual-hwe-20.04
+#sudo apt-get install linux-generic
+#sudo apt-get install linux-image-extra-virtual-hwe-20.04
+
+echo try to instaall linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64
+curl http://archive.ubuntu.com/ubuntu/pool/main/l/linux-azure/linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb \
+  --output linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb
+sudo dpkg -i linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb
+
 cd /lib/modules/
+ls -lh
 echo look for mac80211_hwsim.ko
 find . -name mac80211_hwsim.ko
 
 # TODO: use the result of `find`, since 5.15.0-XX could change
 # originally threw: modprobe: FATAL: Module mac80211_hwsim not found in directory /lib/modules/5.15.0-1019-azure
-#sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure
+sudo mkdir -p /lib/modules/$AZURE_KERNEL_VER/kernel/drivers/net/wireless/
+sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure/kernel/drivers/net/wireless/
 
 sudo depmod -a
 sudo modprobe mac80211_hwsim || echo 'modprobe failed, try insmod'
