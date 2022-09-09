@@ -12,6 +12,7 @@ do_action_prep() {
         libdbus-1-dev \
         gnutls-dev \
         gnutls-bin \
+        libmnl \
         xtables-addons-common \
         xtables-addons-source
 
