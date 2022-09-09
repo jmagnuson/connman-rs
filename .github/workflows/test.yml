@@ -7,20 +7,17 @@ jobs:
     name: cargo test
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Run modprobe
+        run: sudo ci/gh_install_hwsim.sh
+
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-
-      - name: Run modprobe
-        run: sudo modprobe mac80211_hwsim
-
-      - name: Run lsmod
-        run: sudo lsmod
