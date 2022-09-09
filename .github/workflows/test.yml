@@ -19,8 +19,8 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Run cargo test
+      - name: Run modprobe
         run: sudo modprobe mac80211_hwsim
 
-      - name: Run cargo test
+      - name: Run lsmod
         run: sudo lsmod
