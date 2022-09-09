@@ -2,6 +2,8 @@
 
 set -ex
 
+# from: https://github.com/openweave/happy/blob/cbf93f74eb64a083fbb213d2140e7df9a2d7bc64/.github/workflows/main.yml
+
 AZURE_KERNEL_VER="5.15.0-1019-azure"
 
 # i don't think we want to update
@@ -13,12 +15,13 @@ sudo apt-get install wireless-crda
 #curl http://archive.ubuntu.com/ubuntu/pool/main/l/linux-azure/linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64.deb --output linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64.deb
 
 #sudo apt-get install linux-generic
-#sudo apt-get install linux-image-extra-virtual-hwe-20.04
 
 echo try to instaall linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64
 curl http://archive.ubuntu.com/ubuntu/pool/main/l/linux-azure/linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb \
   --output linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb
 sudo dpkg -i linux-modules-extra-5.15.0-1019-azure_5.15.0-1019.24_amd64.deb
+
+sudo apt-get install linux-image-extra-virtual-hwe-20.04
 
 cd /lib/modules/
 ls -lh
@@ -35,8 +38,8 @@ find . -name mac80211_hwsim.ko
 #sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure/kernel/drivers/net/wireless/
 
 sudo depmod -a
-sudo modprobe mac80211_hwsim || echo 'modprobe failed, try insmod' && find . -name mac80211_hwsim.ko -exec sudo insmod -f {} \;
-#sudo insmod /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko
+sudo modprobe mac80211_hwsim || echo 'modprobe failed, try insmod' # && find . -name mac80211_hwsim.ko -exec sudo insmod -f {} \;
+sudo insmod -f /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko
 
 echo "search again"
 cd 5.15.0-1019-azure
