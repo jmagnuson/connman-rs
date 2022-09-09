@@ -4,8 +4,10 @@ set -ex
 
 AZURE_KERNEL_VER="5.15.0-1019-azure"
 
-sudo apt-get upgrade
-sudo apt-get update
+# i don't think we want to update
+#sudo apt-get upgrade
+#sudo apt-get update
+
 echo show linux-image-extra
 sudo apt-get install wireless-crda
 echo try to instaall linux-modules-extra-5.4.0-1020-azure_5.4.0-1020.20_amd64
