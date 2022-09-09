@@ -18,8 +18,9 @@ cd /lib/modules/
 echo look for mac80211_hwsim.ko
 find . -name mac80211_hwsim.ko
 
+# TODO: use the result of `find`, since 5.15.0-XX could change
 # originally threw: modprobe: FATAL: Module mac80211_hwsim not found in directory /lib/modules/5.15.0-1019-azure
-sudo ln -s /lib/modules/5.15.0-42-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure
+sudo ln -s /lib/modules/5.15.0-46-generic/kernel/drivers/net/wireless/mac80211_hwsim.ko /lib/modules/5.15.0-1019-azure
 
 sudo depmod -a
 sudo modprobe mac80211_hwsim
