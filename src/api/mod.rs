@@ -3,6 +3,10 @@
 #[rustfmt::skip]
 mod gen;
 
+pub use gen::manager::ManagerServicesChanged;
+pub use gen::service::ServicePropertyChanged;
+pub use gen::technology::TechnologyPropertyChanged;
+
 pub mod manager;
 pub mod service;
 pub mod technology;
