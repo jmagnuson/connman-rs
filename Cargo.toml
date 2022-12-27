@@ -33,12 +33,13 @@ default = []
 introspection = ["xml-rs"]
 
 [dependencies]
-dbus = { git = "https://github.com/diwic/dbus-rs" }
-dbus-tokio = { git = "https://github.com/diwic/dbus-rs" }
+dbus = { version = "0.9", features = ["futures"]}
+dbus-tokio = { version = "0.7" }
 thiserror = "1.0.11"
-tokio = "0.2.13"
+tokio = "1.21.2"
 xml-rs = { version = "0.3", optional = true }
 
 [dev-dependencies]
+tokio = { version = "1.21.2", features = ["full"] }
 hex = "0.3"
 structopt = "0.2"
