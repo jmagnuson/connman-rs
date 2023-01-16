@@ -171,7 +171,7 @@ impl From<PropertyKind> for &'static str {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
     Ethernet,
     Wifi,

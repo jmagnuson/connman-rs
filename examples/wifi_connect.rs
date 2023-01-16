@@ -118,13 +118,7 @@ async fn main() {
     let maybe_svc = services.iter().find(|svc| {
         //wifi_ffffffffffff_00112233aabbccdd_managed_psk
         //tech_mac.addr...._hex.ssid........_security...
-        let pathv = svc
-            .path()
-            .as_cstr()
-            .to_str()
-            .unwrap()
-            .split("_")
-            .collect::<Vec<&str>>();
+        let pathv = svc.path().split("_").collect::<Vec<&str>>();
         let svc_hex_ssid = *pathv.get(2).unwrap();
         let found = svc_hex_ssid == hex_ssid;
         if found {

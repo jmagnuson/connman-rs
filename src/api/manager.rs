@@ -50,12 +50,18 @@ impl<T: NonblockReply, C: Deref<Target = T> + Clone> Manager<C> {
     pub async fn get_services(&self) -> Result<Vec<Service<C>>, Error> {
         let connclone = self.proxy.connection.clone();
 
-        let v = IManager::get_services(&self.proxy).await?;
-        Ok(v.into_iter()
+        let services = IManager::get_services(&self.proxy).await?;
+        Ok(services
+            .into_iter()
             .filter_map(|(path, args)| {
                 Service::new(connclone.clone(), path, args, self.timeout).ok()
             })
             .collect())
+    }
+
+    pub async fn register_agent(&self, path: dbus::Path<'static>) -> Result<(), Error> {
+        IManager::register_agent(&self.proxy, path).await?;
+        Ok(())
     }
 }
 
